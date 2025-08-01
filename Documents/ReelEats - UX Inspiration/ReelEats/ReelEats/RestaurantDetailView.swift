@@ -14,51 +14,50 @@ struct RestaurantDetailView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Full screen image background
-                AsyncImage(url: URL(string: restaurant.imageURL)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(restaurant.category.color.opacity(0.3))
-                }
-                .frame(width: geometry.size.width, height: geometry.size.height)
-                .ignoresSafeArea()
-                
-                // Gradient overlay for readability
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.7)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+                // Clean background
+                Color(.systemBackground)
+                    .ignoresSafeArea()
                 
                 // Content overlay
                 VStack(spacing: 0) {
-                    // Top bar with close button
-                    HStack {
-                        Spacer()
+                    // Hero image with close button overlay
+                    ZStack(alignment: .topTrailing) {
+                        AsyncImage(url: URL(string: restaurant.imageURL)) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Rectangle()
+                                .fill(restaurant.category.color.opacity(0.3))
+                                .overlay(
+                                    Image(systemName: restaurant.category.icon)
+                                        .font(.system(size: 60))
+                                        .foregroundColor(restaurant.category.color)
+                                )
+                        }
+                        .frame(height: 300)
+                        .clipped()
                         
+                        // Close button
                         Button(action: {
                             HapticManager.shared.light()
                             dismiss()
                         }) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 28))
-                                .foregroundColor(.white.opacity(0.8))
+                                .foregroundColor(.white)
+                                .background(Color.black.opacity(0.3))
+                                .clipShape(Circle())
                         }
                         .padding(.trailing, 20)
-                        .padding(.top, 50)
+                        .padding(.top, 60)
                     }
-                    
-                    Spacer()
                     
                     // Bottom content card
                     VStack(spacing: 0) {
                         // Drag handle
                         RoundedRectangle(cornerRadius: 2.5)
-                            .fill(Color.white.opacity(0.5))
+                            .fill(Color(.systemGray4))
                             .frame(width: 40, height: 4)
                             .padding(.top, 8)
                             .padding(.bottom, 16)
@@ -91,7 +90,7 @@ struct RestaurantDetailView: View {
                                     HStack {
                                         Text(restaurant.name)
                                             .font(.system(size: 28, weight: .bold))
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.primary)
                                         
                                         Spacer()
                                         
@@ -105,23 +104,23 @@ struct RestaurantDetailView: View {
                                     HStack(spacing: 16) {
                                         Image(systemName: restaurant.source.icon)
                                             .font(.system(size: 18))
-                                            .foregroundColor(.white.opacity(0.7))
+                                            .foregroundColor(.secondary)
                                         
                                         Spacer()
                                         
                                         HStack(spacing: 20) {
                                             Image(systemName: "ellipsis")
                                                 .font(.system(size: 18))
-                                                .foregroundColor(.white.opacity(0.7))
+                                                .foregroundColor(.secondary)
                                             
                                             Text(restaurant.source.displayName)
                                                 .font(.system(size: 14))
-                                                .foregroundColor(.white.opacity(0.7))
+                                                .foregroundColor(.secondary)
                                                 .padding(.horizontal, 12)
                                                 .padding(.vertical, 4)
                                                 .overlay(
                                                     RoundedRectangle(cornerRadius: 12)
-                                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
                                                 )
                                         }
                                     }
@@ -130,7 +129,7 @@ struct RestaurantDetailView: View {
                                     // Description
                                     Text(restaurant.description)
                                         .font(.system(size: 16))
-                                        .foregroundColor(.white.opacity(0.8))
+                                        .foregroundColor(.secondary)
                                         .multilineTextAlignment(.center)
                                         .padding(.horizontal, 30)
                                         .padding(.top, 8)
@@ -140,11 +139,11 @@ struct RestaurantDetailView: View {
                                     HStack {
                                         Image(systemName: "location.fill")
                                             .font(.system(size: 16))
-                                            .foregroundColor(.white.opacity(0.7))
+                                            .foregroundColor(.secondary)
                                         
                                         Text(restaurant.address)
                                             .font(.system(size: 16))
-                                            .foregroundColor(.white.opacity(0.7))
+                                            .foregroundColor(.secondary)
                                     }
                                     .padding(.top, 10)
                                     
@@ -188,10 +187,10 @@ struct RestaurantDetailView: View {
                                                     Text("Share")
                                                         .font(.system(size: 14, weight: .medium))
                                                 }
-                                                .foregroundColor(.white)
+                                                .foregroundColor(.primary)
                                                 .frame(maxWidth: .infinity)
                                                 .padding(.vertical, 16)
-                                                .background(Color.white.opacity(0.2))
+                                                .background(Color(.systemGray6))
                                                 .cornerRadius(16)
                                             }
                                             
@@ -204,10 +203,10 @@ struct RestaurantDetailView: View {
                                                     Text("View on Map")
                                                         .font(.system(size: 14, weight: .medium))
                                                 }
-                                                .foregroundColor(.white)
+                                                .foregroundColor(.primary)
                                                 .frame(maxWidth: .infinity)
                                                 .padding(.vertical, 16)
-                                                .background(Color.white.opacity(0.2))
+                                                .background(Color(.systemGray6))
                                                 .cornerRadius(16)
                                             }
                                         }
@@ -225,7 +224,7 @@ struct RestaurantDetailView: View {
                             }
                         }
                     }
-                    .background(showingInsights ? Color(.systemBackground) : Color.clear)
+                    .background(Color(.systemBackground))
                     .cornerRadius(showingInsights ? 0 : 24, corners: [.topLeft, .topRight])
                     .offset(y: showingInsights ? 0 : max(0, scrollOffset))
                     .gesture(
@@ -366,7 +365,7 @@ struct CollectionRow: View {
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.primary)
                     
-                    Text("\(collection.restaurantIds.count) places")
+                    Text("\(collection.restaurantIds.count) spots")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                 }

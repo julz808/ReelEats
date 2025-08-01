@@ -29,11 +29,13 @@ struct RoundedCorner: Shape {
 
 struct SavedTabView: View {
     @EnvironmentObject var store: RestaurantStore
-    @State private var selectedCategory: RestaurantCategory? = .restaurants
+    @State private var selectedCategory: RestaurantCategory? = .all
     @State private var showingDetail = false
     @State private var selectedRestaurant: Restaurant?
     @State private var isAnimating = false
     @State private var selectedView: SavedViewType = .allSpots
+    @State private var selectedCollection: Collection?
+    @State private var showingCollectionDetail = false
     
     enum SavedViewType: String, CaseIterable {
         case allSpots = "All Spots"
@@ -141,7 +143,8 @@ struct SavedTabView: View {
                         CollectionsGridView(
                             collections: store.collections,
                             onCollectionTap: { collection in
-                                // Handle collection tap
+                                selectedCollection = collection
+                                showingCollectionDetail = true
                             }
                         )
                         .transition(.opacity)
@@ -156,6 +159,12 @@ struct SavedTabView: View {
                     .environmentObject(store)
             }
         }
+        .sheet(isPresented: $showingCollectionDetail) {
+            if let collection = selectedCollection {
+                CollectionDetailView(collection: collection)
+                    .environmentObject(store)
+            }
+        }
         .onAppear {
             withAnimation(.easeInOut(duration: 0.6)) {
                 isAnimating = true
@@ -164,7 +173,7 @@ struct SavedTabView: View {
     }
     
     private var filteredRestaurants: [Restaurant] {
-        guard let category = selectedCategory else { return store.savedRestaurants }
+        guard let category = selectedCategory, category != .all else { return store.savedRestaurants }
         return store.savedRestaurants.filter { $0.category == category }
     }
 }
@@ -257,9 +266,14 @@ struct EmptyStateView: View {
             Spacer()
             
             // Add button
-            FloatingAddButton {
-                // Add restaurant action
-            }
+            FloatingAddButton(
+                onAddSpot: {
+                    // Add spot action
+                },
+                onCreateCollection: {
+                    // Create collection action
+                }
+            )
         }
     }
 }
@@ -291,14 +305,254 @@ struct CollectionsGridView: View {
                 Spacer()
                 HStack {
                     Spacer()
-                    FloatingAddButton {
-                        // Add collection action
-                    }
+                    FloatingAddButton(
+                        onAddSpot: {
+                            // Add spot action
+                        },
+                        onCreateCollection: {
+                            // Create collection action
+                        }
+                    )
                     .padding(.trailing, 20)
                     .padding(.bottom, 30)
                 }
             }
         )
+    }
+}
+
+// MARK: - Collection Detail View
+
+struct CollectionDetailView: View {
+    let collection: Collection
+    @EnvironmentObject var store: RestaurantStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingAddSpots = false
+    @State private var showingShareSheet = false
+    
+    private var collectionSpots: [Restaurant] {
+        store.savedRestaurants.filter { restaurant in
+            collection.restaurantIds.contains(restaurant.id)
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    // Collection header
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Collection info
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(collection.name.capitalized)
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundColor(.primary)
+                            
+                            HStack(spacing: 4) {
+                                Text("\(collectionSpots.count) spots")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary)
+                                
+                                if collection.name.contains("date night") || collection.name.contains("road trip") {
+                                    Text("•")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.secondary)
+                                    
+                                    CollaboratorAvatars()
+                                }
+                            }
+                        }
+                        
+                        // Action buttons
+                        HStack(spacing: 12) {
+                            Button(action: {
+                                showingAddSpots = true
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 16, weight: .medium))
+                                    Text("Add Spots")
+                                        .font(.system(size: 16, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(Color.black)
+                                .cornerRadius(25)
+                            }
+                            
+                            Button(action: {
+                                HapticManager.shared.light()
+                                showingShareSheet = true
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.system(size: 16, weight: .medium))
+                                    Text("Share")
+                                        .font(.system(size: 16, weight: .medium))
+                                }
+                                .foregroundColor(.primary)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(25)
+                            }
+                            
+                            Spacer()
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    
+                    // Spots grid (Airbnb-style cards)
+                    if collectionSpots.isEmpty {
+                        EmptyCollectionState(collectionName: collection.name)
+                    } else {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 2), spacing: 16) {
+                            ForEach(collectionSpots) { spot in
+                                AirbnbStyleSpotCard(restaurant: spot)
+                                    .onTapGesture {
+                                        HapticManager.shared.medium()
+                                        // Handle spot tap
+                                    }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                }
+                .padding(.bottom, 100)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    dismiss()
+                }
+            )
+        }
+        .sheet(isPresented: $showingAddSpots) {
+            // Add spots to collection view
+            Text("Add Spots to Collection")
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            // Share sheet
+            Text("Share Collection")
+        }
+    }
+}
+
+// MARK: - Airbnb-Style Spot Card
+
+struct AirbnbStyleSpotCard: View {
+    let restaurant: Restaurant
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Image
+            AsyncImage(url: URL(string: restaurant.imageURL)) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Rectangle()
+                    .fill(restaurant.category.color.opacity(0.3))
+                    .overlay(
+                        Image(systemName: restaurant.category.icon)
+                            .font(.system(size: 30))
+                            .foregroundColor(restaurant.category.color)
+                    )
+            }
+            .frame(height: 180)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            
+            // Spot info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(restaurant.name.components(separatedBy: " ").prefix(3).joined(separator: " "))
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.yellow)
+                    
+                    Text(String(format: "%.1f", restaurant.rating))
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                    
+                    Text("•")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                    
+                    Text(restaurant.category.rawValue)
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .background(Color(.systemBackground))
+    }
+}
+
+// MARK: - Collaborator Avatars
+
+struct CollaboratorAvatars: View {
+    private let colors: [Color] = [.blue, .green, .orange, .purple]
+    
+    var body: some View {
+        HStack(spacing: -8) {
+            ForEach(0..<min(3, colors.count), id: \.self) { index in
+                Circle()
+                    .fill(colors[index])
+                    .frame(width: 24, height: 24)
+                    .overlay(
+                        Circle()
+                            .stroke(Color(.systemBackground), lineWidth: 2)
+                    )
+            }
+            
+            if colors.count > 3 {
+                Circle()
+                    .fill(Color(.systemGray5))
+                    .frame(width: 24, height: 24)
+                    .overlay(
+                        Text("+\(colors.count - 3)")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.secondary)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color(.systemBackground), lineWidth: 2)
+                    )
+            }
+        }
+    }
+}
+
+// MARK: - Empty Collection State
+
+struct EmptyCollectionState: View {
+    let collectionName: String
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "folder")
+                .font(.system(size: 60))
+                .foregroundColor(.secondary.opacity(0.5))
+            
+            VStack(spacing: 8) {
+                Text("No spots yet")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
+                
+                Text("Start adding spots to your \(collectionName) collection")
+                    .font(.system(size: 16))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(.vertical, 60)
+        .padding(.horizontal, 40)
     }
 }
 
@@ -311,6 +565,10 @@ struct CollectionAlbumCard: View {
         Color.purple.opacity(0.8),
         Color.pink.opacity(0.8)
     ]
+    
+    private var isCollaborative: Bool {
+        collection.name.contains("date night") || collection.name.contains("road trip")
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -326,6 +584,16 @@ struct CollectionAlbumCard: View {
                 .aspectRatio(1.0, contentMode: .fit)
                 .overlay(
                     VStack {
+                        // Collaborative indicator at top
+                        if isCollaborative {
+                            HStack {
+                                Spacer()
+                                CollaboratorAvatars()
+                                    .padding(.trailing, 12)
+                                    .padding(.top, 12)
+                            }
+                        }
+                        
                         Spacer()
                         
                         Text(collection.name.lowercased())
@@ -339,12 +607,22 @@ struct CollectionAlbumCard: View {
             
             // Collection info
             VStack(alignment: .leading, spacing: 4) {
-                Text(collection.name)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
+                HStack {
+                    Text(collection.name)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    if isCollaborative {
+                        Image(systemName: "person.2.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                }
                 
-                Text("\(collection.restaurantIds.count) places")
+                Text("\(collection.restaurantIds.count) spots")
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
             }
@@ -382,9 +660,14 @@ struct RestaurantListView: View {
                 Spacer()
                 HStack {
                     Spacer()
-                    FloatingAddButton {
-                        // Add restaurant action
-                    }
+                    FloatingAddButton(
+                        onAddSpot: {
+                            // Add spot action
+                        },
+                        onCreateCollection: {
+                            // Create collection action
+                        }
+                    )
                     .padding(.trailing, 20)
                     .padding(.bottom, 30)
                 }
@@ -596,15 +879,104 @@ struct DemoRestaurantCard: View {
     }
 }
 
-// MARK: - Floating Add Button
+// MARK: - Floating Add Button with Popup Menu
 
 struct FloatingAddButton: View {
+    let onAddSpot: () -> Void
+    let onCreateCollection: () -> Void
+    @State private var isPressed = false
+    @State private var showingMenu = false
+    
+    var body: some View {
+        ZStack {
+            // Menu options
+            if showingMenu {
+                VStack(spacing: 12) {
+                    // Create Collection option
+                    AddMenuOption(
+                        icon: "folder.badge.plus",
+                        title: "Create Collection",
+                        action: {
+                            HapticManager.shared.medium()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showingMenu = false
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                onCreateCollection()
+                            }
+                        }
+                    )
+                    .opacity(showingMenu ? 1.0 : 0.0)
+                    .scaleEffect(showingMenu ? 1.0 : 0.1)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.1), value: showingMenu)
+                    
+                    // Add Spot option
+                    AddMenuOption(
+                        icon: "plus.circle",
+                        title: "Add Spot",
+                        action: {
+                            HapticManager.shared.medium()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showingMenu = false
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                onAddSpot()
+                            }
+                        }
+                    )
+                    .opacity(showingMenu ? 1.0 : 0.0)
+                    .scaleEffect(showingMenu ? 1.0 : 0.1)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showingMenu)
+                    
+                    Spacer()
+                        .frame(height: 72) // Space for main button
+                }
+            }
+            
+            // Main add button
+            VStack {
+                Spacer()
+                
+                Button(action: {
+                    HapticManager.shared.light()
+                    withAnimation(.easeInOut(duration: 0.1)) {
+                        isPressed = true
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.easeInOut(duration: 0.1)) {
+                            isPressed = false
+                        }
+                        
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            showingMenu.toggle()
+                        }
+                    }
+                }) {
+                    Image(systemName: showingMenu ? "xmark" : "plus")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(Color.black)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                        .scaleEffect(isPressed ? 0.95 : 1.0)
+                        .rotationEffect(.degrees(showingMenu ? 180 : 0))
+                }
+            }
+        }
+        .frame(width: 200, height: 200)
+    }
+}
+
+struct AddMenuOption: View {
+    let icon: String
+    let title: String
     let action: () -> Void
     @State private var isPressed = false
     
     var body: some View {
         Button(action: {
-            HapticManager.shared.light()
             withAnimation(.easeInOut(duration: 0.1)) {
                 isPressed = true
             }
@@ -616,15 +988,28 @@ struct FloatingAddButton: View {
                 action()
             }
         }) {
-            Image(systemName: "plus")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(width: 56, height: 56)
-                .background(Color.black)
-                .clipShape(Circle())
-                .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-                .scaleEffect(isPressed ? 0.95 : 1.0)
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.primary)
+                    .frame(width: 24)
+                
+                Text(title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+            )
+            .scaleEffect(isPressed ? 0.97 : 1.0)
         }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -647,7 +1032,7 @@ struct ModernMapView: View {
 
 struct MapTabView: View {
     @EnvironmentObject var store: RestaurantStore
-    @State private var selectedCategory: RestaurantCategory? = .restaurants
+    @State private var selectedCategory: RestaurantCategory? = .all
     @State private var selectedCollection: Collection?
     @State private var showingBottomSheet = false
     @State private var bottomSheetOffset: CGFloat = 350
@@ -713,10 +1098,10 @@ struct MapTabView: View {
                     }
                     .padding(.bottom, 20)
                     
-                    // Places in collection count
+                    // Spots in collection count
                     if let collection = selectedCollection {
                         HStack {
-                            Text("\(filteredMapRestaurants.count) places in collection")
+                            Text("\(filteredMapRestaurants.count) spots in collection")
                                 .font(.system(size: 18, weight: .semibold))
                             
                             Spacer()
@@ -839,7 +1224,7 @@ struct MapTabView: View {
             restaurants = restaurants.filter { _ in true } // Show all for now
         }
         
-        if let category = selectedCategory {
+        if let category = selectedCategory, category != .all {
             restaurants = restaurants.filter { $0.category == category }
         }
         
@@ -1075,7 +1460,7 @@ struct ProfileTabView: View {
                             .foregroundColor(.primary)
                         
                         HStack(spacing: 16) {
-                            // Places extract
+                            // Spots extract
                             VStack(spacing: 12) {
                                 Circle()
                                     .fill(Color.blue.opacity(0.2))
@@ -1085,7 +1470,7 @@ struct ProfileTabView: View {
                                             .font(.system(size: 24))
                                     )
                                 
-                                Text("Places")
+                                Text("Spots")
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundColor(.blue)
                             }
@@ -1261,12 +1646,14 @@ struct SettingsRow: View {
 // MARK: - Supporting Models and Data
 
 enum RestaurantCategory: String, CaseIterable {
+    case all = "All"
     case restaurants = "Restaurants"
     case cafe = "Cafe"
     case bars = "Bars"
     
     var icon: String {
         switch self {
+        case .all: return "list.bullet"
         case .restaurants: return "fork.knife"
         case .cafe: return "cup.and.saucer.fill"
         case .bars: return "wineglass.fill"
@@ -1275,6 +1662,7 @@ enum RestaurantCategory: String, CaseIterable {
     
     var color: Color {
         switch self {
+        case .all: return .gray
         case .restaurants: return .blue
         case .cafe: return .brown
         case .bars: return .purple
