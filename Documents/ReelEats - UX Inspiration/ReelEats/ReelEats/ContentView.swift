@@ -25,6 +25,9 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showingAddMenu = false
     @State private var showingProfile = false
+    @State private var showingAddSpot = false
+    @State private var showingCreateCollection = false
+    @State private var showingScanCollection = false
     
     var body: some View {
         ZStack {
@@ -47,22 +50,31 @@ struct MainTabView: View {
                     selectedTab: $selectedTab,
                     showingAddMenu: $showingAddMenu,
                     onManualSearch: {
-                        // Handle manual search
-                        print("Manual search tapped")
+                        showingAddSpot = true
                     },
                     onCreateCollection: {
-                        // Handle create collection
-                        print("Create collection tapped")
+                        showingCreateCollection = true
                     },
                     onScanCollection: {
-                        // Handle scan collection
-                        print("Scan collection tapped")
+                        showingScanCollection = true
                     }
                 )
             }
         }
         .sheet(isPresented: $showingProfile) {
             ProfileTabView()
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showingAddSpot) {
+            AddSpotView()
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showingCreateCollection) {
+            NewCollectionView()
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showingScanCollection) {
+            ScanCollectionView()
                 .environmentObject(store)
         }
         .onAppear {

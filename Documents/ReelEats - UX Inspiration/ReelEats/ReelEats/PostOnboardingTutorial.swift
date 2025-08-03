@@ -27,6 +27,23 @@ struct PostOnboardingTutorialCoordinator: View {
                         store.completeSetup()
                     }
             }
+            
+            // Skip button - appears on all tutorial screens (not MainTabView)
+            if currentScreen < 5 {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button("Skip") {
+                            store.completeSetup()
+                        }
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.gray)
+                        .padding(.top, 60)
+                        .padding(.trailing, 20)
+                    }
+                    Spacer()
+                }
+            }
         }
         .opacity(isTransitioning ? 0.0 : 1.0)
         .animation(.easeInOut(duration: 0.4), value: isTransitioning)

@@ -164,7 +164,6 @@ struct SavedTabView: View {
                     )
                     .transition(.opacity)
                 }
-                }
             }
         }
         .navigationBarHidden(true)
@@ -1563,24 +1562,86 @@ struct CustomBottomNavBar: View {
     let onScanCollection: () -> Void
     
     var body: some View {
-        ZStack {
-            // Bottom bar background - extends to bottom edge of screen
-            VStack {
-                Spacer()
-                Rectangle()
-                    .fill(Color(.systemBackground))
-                    .frame(height: 100)
-                    .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: -1)
+        ZStack(alignment: .bottom) {
+            // Menu options (appear above the nav bar)
+            if showingAddMenu {
+                VStack {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        // Add Spot option
+                        AddMenuOption(
+                            icon: "plus.circle",
+                            title: "Add Spot",
+                            action: {
+                                HapticManager.shared.medium()
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showingAddMenu = false
+                                }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                    onManualSearch()
+                                }
+                            }
+                        )
+                        .opacity(showingAddMenu ? 1.0 : 0.0)
+                        .scaleEffect(showingAddMenu ? 1.0 : 0.1)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.2), value: showingAddMenu)
+                        
+                        // Create Collection option
+                        AddMenuOption(
+                            icon: "folder.badge.plus",
+                            title: "Create Collection",
+                            action: {
+                                HapticManager.shared.medium()
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showingAddMenu = false
+                                }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                    onCreateCollection()
+                                }
+                            }
+                        )
+                        .opacity(showingAddMenu ? 1.0 : 0.0)
+                        .scaleEffect(showingAddMenu ? 1.0 : 0.1)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.1), value: showingAddMenu)
+                        
+                        // Scan Collection option
+                        AddMenuOption(
+                            icon: "qrcode.viewfinder",
+                            title: "Scan Collection",
+                            action: {
+                                HapticManager.shared.medium()
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showingAddMenu = false
+                                }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                    onScanCollection()
+                                }
+                            }
+                        )
+                        .opacity(showingAddMenu ? 1.0 : 0.0)
+                        .scaleEffect(showingAddMenu ? 1.0 : 0.1)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showingAddMenu)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 60) // Add horizontal padding to center and reduce width
+                    .padding(.bottom, 130) // Position above the nav bar
+                }
             }
-            .ignoresSafeArea(.container, edges: .bottom)
             
-            // Navigation items positioned correctly
-            VStack {
+            // Bottom navigation bar with proper positioning
+            VStack(spacing: 0) {
                 Spacer()
                 
-                HStack(spacing: 0) {
-                    // Saved tab - positioned closer to center
+                ZStack(alignment: .bottom) {
+                    // Nav bar background - extends all the way to bottom
+                    Rectangle()
+                        .fill(Color(.systemBackground))
+                        .frame(height: 80) // Reduced height
+                        .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: -1)
+                    
+                    // Navigation items
                     HStack {
+                        // Saved tab
                         Spacer()
                         TabBarItem(
                             icon: selectedTab == 0 ? "bookmark.fill" : "bookmark",
@@ -1590,22 +1651,30 @@ struct CustomBottomNavBar: View {
                             HapticManager.shared.selection()
                             selectedTab = 0
                         }
+                        
                         Spacer()
+                        
+                        // Center floating + button
+                        Button(action: {
+                            HapticManager.shared.light()
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                showingAddMenu.toggle()
+                            }
+                        }) {
+                            Image(systemName: showingAddMenu ? "xmark" : "plus")
+                                .font(.system(size: 20, weight: .bold)) // Slightly smaller icon
+                                .foregroundColor(.white)
+                                .frame(width: 50, height: 50) // Slightly smaller circle
+                                .background(Color.black)
+                                .clipShape(Circle())
+                                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
+                                .rotationEffect(.degrees(showingAddMenu ? 45 : 0))
+                        }
+                        .offset(y: -17) // Adjusted so only top third peeks above nav bar
+                        
                         Spacer()
-                    }
-                    
-                    // Center floating + button
-                    FloatingCenterButton(
-                        showingMenu: $showingAddMenu,
-                        onManualSearch: onManualSearch,
-                        onCreateCollection: onCreateCollection,
-                        onScanCollection: onScanCollection
-                    )
-                    
-                    // Map tab - positioned closer to center
-                    HStack {
-                        Spacer()
-                        Spacer()
+                        
+                        // Map tab
                         TabBarItem(
                             icon: selectedTab == 1 ? "map.fill" : "map",
                             title: "Map",
@@ -1616,9 +1685,10 @@ struct CustomBottomNavBar: View {
                         }
                         Spacer()
                     }
+                    .padding(.bottom, 25) // Further reduced padding for shorter nav bar
                 }
-                .padding(.bottom, 30)
             }
+            .ignoresSafeArea(.container, edges: .bottom)
         }
     }
 }
@@ -1633,122 +1703,14 @@ struct TabBarItem: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundColor(isSelected ? .black : .gray)
-                
-                Text(title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(isSelected ? .black : .gray)
-            }
+            Image(systemName: icon)
+                .font(.system(size: 24, weight: .medium)) // Slightly larger since no text
+                .foregroundColor(isSelected ? .black : .gray)
         }
         .buttonStyle(PlainButtonStyle())
     }
 }
 
-// MARK: - Floating Center Button
-
-struct FloatingCenterButton: View {
-    @Binding var showingMenu: Bool
-    let onManualSearch: () -> Void
-    let onCreateCollection: () -> Void
-    let onScanCollection: () -> Void
-    @State private var isPressed = false
-    
-    var body: some View {
-        VStack {
-            // Menu options (appear above the button)
-            if showingMenu {
-                VStack(spacing: 12) {
-                    // Add Spot option (was Manual Search) - now first
-                    AddMenuOption(
-                        icon: "plus.circle",
-                        title: "Add Spot",
-                        action: {
-                            HapticManager.shared.medium()
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showingMenu = false
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                onManualSearch()
-                            }
-                        }
-                    )
-                    .opacity(showingMenu ? 1.0 : 0.0)
-                    .scaleEffect(showingMenu ? 1.0 : 0.1)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.2), value: showingMenu)
-                    
-                    // Create Collection option - second
-                    AddMenuOption(
-                        icon: "folder.badge.plus",
-                        title: "Create Collection",
-                        action: {
-                            HapticManager.shared.medium()
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showingMenu = false
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                onCreateCollection()
-                            }
-                        }
-                    )
-                    .opacity(showingMenu ? 1.0 : 0.0)
-                    .scaleEffect(showingMenu ? 1.0 : 0.1)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.1), value: showingMenu)
-                    
-                    // Scan Collection option - third
-                    AddMenuOption(
-                        icon: "qrcode.viewfinder",
-                        title: "Scan Collection",
-                        action: {
-                            HapticManager.shared.medium()
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showingMenu = false
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                onScanCollection()
-                            }
-                        }
-                    )
-                    .opacity(showingMenu ? 1.0 : 0.0)
-                    .scaleEffect(showingMenu ? 1.0 : 0.1)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showingMenu)
-                }
-                .offset(y: -30)
-            }
-            
-            // Main floating + button positioned at the top edge of nav bar
-            Button(action: {
-                HapticManager.shared.light()
-                withAnimation(.easeInOut(duration: 0.1)) {
-                    isPressed = true
-                }
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.easeInOut(duration: 0.1)) {
-                        isPressed = false
-                    }
-                    
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        showingMenu.toggle()
-                    }
-                }
-            }) {
-                Image(systemName: showingMenu ? "xmark" : "plus")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 56, height: 56)
-                    .background(Color.black)
-                    .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
-                    .scaleEffect(isPressed ? 0.95 : 1.0)
-                    .rotationEffect(.degrees(showingMenu ? 180 : 0))
-            }
-            .offset(y: -40) // Elevated above the tab bar - positioned at top edge
-        }
-    }
-}
 
 // MARK: - Supporting Models and Data
 

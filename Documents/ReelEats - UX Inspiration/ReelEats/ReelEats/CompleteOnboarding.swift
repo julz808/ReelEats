@@ -11,17 +11,27 @@ struct OnboardingCoordinator: View {
     var body: some View {
         ZStack {
             if currentStep == 0 {
-                WelcomeScreen {
-                    withAnimation(.easeInOut(duration: 0.5)) {
-                        currentStep += 1
+                WelcomeScreen(
+                    onNext: {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            currentStep += 1
+                        }
+                    },
+                    onSkip: {
+                        store.completeSetup()
                     }
-                }
+                )
             } else if currentStep == 1 {
-                AuthScreen {
-                    withAnimation(.easeInOut(duration: 0.5)) {
-                        currentStep += 1
+                AuthScreen(
+                    onNext: {
+                        withAnimation(.easeInOut(duration: 0.5)) {
+                            currentStep += 1
+                        }
+                    },
+                    onSkip: {
+                        store.completeSetup()
                     }
-                }
+                )
             } else {
                 PostOnboardingTutorialCoordinator()
                     .environmentObject(store)
@@ -32,6 +42,7 @@ struct OnboardingCoordinator: View {
 
 struct WelcomeScreen: View {
     let onNext: () -> Void
+    let onSkip: () -> Void
     @State private var isAnimating = false
     
     var body: some View {
@@ -42,6 +53,21 @@ struct WelcomeScreen: View {
                 endPoint: .bottom
             )
             .ignoresSafeArea()
+            
+            // Skip button - top right
+            VStack {
+                HStack {
+                    Spacer()
+                    Button("Skip") {
+                        onSkip()
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.gray)
+                    .padding(.top, 60)
+                    .padding(.trailing, 20)
+                }
+                Spacer()
+            }
             
             VStack(spacing: 50) {
                 Spacer()
@@ -121,6 +147,7 @@ struct WelcomeScreen: View {
 
 struct AuthScreen: View {
     let onNext: () -> Void
+    let onSkip: () -> Void
     @State private var isPresented = false
     
     var body: some View {
@@ -129,6 +156,21 @@ struct AuthScreen: View {
             Color.black.opacity(0.5)
                 .ignoresSafeArea()
                 .onTapGesture { /* dismiss */ }
+            
+            // Skip button - top right
+            VStack {
+                HStack {
+                    Spacer()
+                    Button("Skip") {
+                        onSkip()
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.gray)
+                    .padding(.top, 60)
+                    .padding(.trailing, 20)
+                }
+                Spacer()
+            }
             
             VStack {
                 Spacer()
