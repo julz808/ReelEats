@@ -8,8 +8,6 @@ struct RestaurantDetailView: View {
     @EnvironmentObject var store: RestaurantStore
     @Environment(\.dismiss) private var dismiss
     @State private var showingCollectionPicker = false
-    @State private var scrollOffset: CGFloat = 0
-    @State private var showingInsights = false
     
     var body: some View {
         GeometryReader { geometry in
@@ -38,7 +36,7 @@ struct RestaurantDetailView: View {
                         .frame(height: 300)
                         .clipped()
                         
-                        // Close button
+                        // Close button - moved to top right
                         Button(action: {
                             HapticManager.shared.light()
                             dismiss()
@@ -50,7 +48,7 @@ struct RestaurantDetailView: View {
                                 .clipShape(Circle())
                         }
                         .padding(.trailing, 20)
-                        .padding(.top, 60)
+                        .padding(.top, 50)
                     }
                     
                     // Bottom content card
@@ -62,191 +60,176 @@ struct RestaurantDetailView: View {
                             .padding(.top, 8)
                             .padding(.bottom, 16)
                         
-                        // Content section
-                        VStack(spacing: 0) {
-                            if !showingInsights {
-                                // Main detail view - wrapped in ScrollView for better content fitting
-                                ScrollView {
-                                    VStack(spacing: 20) {
-                                    // Category tag
-                                    HStack {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: restaurant.category.icon)
-                                                .font(.system(size: 14, weight: .medium))
-                                            Text(restaurant.tags.first ?? restaurant.category.rawValue)
-                                                .font(.system(size: 14, weight: .medium))
-                                        }
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(restaurant.category.color)
-                                        .cornerRadius(20)
-                                        
-                                        Spacer()
+                        // Content section - simplified single mode
+                        ScrollView {
+                            VStack(spacing: 20) {
+                                // Category tag
+                                HStack {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: restaurant.category.icon)
+                                            .font(.system(size: 14, weight: .medium))
+                                        Text(restaurant.tags.first ?? restaurant.category.rawValue)
+                                            .font(.system(size: 14, weight: .medium))
                                     }
-                                    .padding(.horizontal, 20)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(restaurant.category.color)
+                                    .cornerRadius(20)
                                     
-                                    // Restaurant name
-                                    HStack {
-                                        Text(restaurant.name)
-                                            .font(.system(size: 28, weight: .bold))
-                                            .foregroundColor(.primary)
-                                        
-                                        Spacer()
-                                        
-                                        Image(systemName: "star.fill")
-                                            .font(.system(size: 20))
-                                            .foregroundColor(.yellow)
-                                    }
-                                    .padding(.horizontal, 20)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                // Restaurant name
+                                HStack {
+                                    Text(restaurant.name)
+                                        .font(.system(size: 28, weight: .bold))
+                                        .foregroundColor(.primary)
                                     
-                                    // Source info
-                                    HStack(spacing: 16) {
-                                        Image(systemName: restaurant.source.icon)
+                                    Spacer()
+                                    
+                                    Image(systemName: "star.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.yellow)
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                // Source info
+                                HStack(spacing: 16) {
+                                    Image(systemName: restaurant.source.icon)
+                                        .font(.system(size: 18))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Spacer()
+                                    
+                                    HStack(spacing: 20) {
+                                        Image(systemName: "ellipsis")
                                             .font(.system(size: 18))
                                             .foregroundColor(.secondary)
                                         
-                                        Spacer()
-                                        
-                                        HStack(spacing: 20) {
-                                            Image(systemName: "ellipsis")
-                                                .font(.system(size: 18))
-                                                .foregroundColor(.secondary)
+                                        Text(restaurant.source.displayName)
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.secondary)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 4)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                            )
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                
+                                // Description
+                                Text(restaurant.description)
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 30)
+                                    .padding(.top, 8)
+                                    .lineLimit(3)
+                                
+                                // Address
+                                HStack {
+                                    Image(systemName: "location.fill")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Text(restaurant.address)
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.top, 10)
+                                
+                                // Mini map preview
+                                RestaurantMiniMap(restaurant: restaurant)
+                                    .frame(height: 120)
+                                    .cornerRadius(16)
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 8)
+                                
+                                // Action buttons - including Make a Booking
+                                VStack(spacing: 12) {
+                                    // Add to Collection button
+                                    Button(action: {
+                                        HapticManager.shared.medium()
+                                        showingCollectionPicker = true
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "folder.badge.plus")
+                                                .font(.system(size: 18, weight: .medium))
                                             
-                                            Text(restaurant.source.displayName)
-                                                .font(.system(size: 14))
-                                                .foregroundColor(.secondary)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 4)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 12)
-                                                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                                                )
+                                            Text("Add to Collection")
+                                                .font(.system(size: 18, weight: .semibold))
                                         }
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 16)
+                                        .background(Color.black)
+                                        .cornerRadius(16)
                                     }
                                     .padding(.horizontal, 20)
                                     
-                                    // Description
-                                    Text(restaurant.description)
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.secondary)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal, 30)
-                                        .padding(.top, 8)
-                                        .lineLimit(3)
-                                    
-                                    // Address
-                                    HStack {
-                                        Image(systemName: "location.fill")
-                                            .font(.system(size: 16))
-                                            .foregroundColor(.secondary)
-                                        
-                                        Text(restaurant.address)
-                                            .font(.system(size: 16))
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .padding(.top, 10)
-                                    
-                                    // Mini map preview
-                                    RestaurantMiniMap(restaurant: restaurant)
-                                        .frame(height: 120)
-                                        .cornerRadius(16)
-                                        .padding(.horizontal, 20)
-                                        .padding(.top, 8)
-                                    
-                                    // Action buttons
-                                    VStack(spacing: 0) {
-                                        // Add to Collection button
+                                    // Three action buttons in a row
+                                    HStack(spacing: 12) {
                                         Button(action: {
-                                            HapticManager.shared.medium()
-                                            showingCollectionPicker = true
+                                            HapticManager.shared.light()
                                         }) {
-                                            HStack {
-                                                Image(systemName: "folder.badge.plus")
-                                                    .font(.system(size: 18, weight: .medium))
-                                                
-                                                Text("Add to Collection")
-                                                    .font(.system(size: 18, weight: .semibold))
+                                            VStack(spacing: 8) {
+                                                Image(systemName: "square.and.arrow.up")
+                                                    .font(.system(size: 20))
+                                                Text("Share")
+                                                    .font(.system(size: 14, weight: .medium))
                                             }
-                                            .foregroundColor(.white)
+                                            .foregroundColor(.primary)
                                             .frame(maxWidth: .infinity)
                                             .padding(.vertical, 16)
-                                            .background(Color.black)
+                                            .background(Color(.systemGray6))
                                             .cornerRadius(16)
                                         }
-                                        .padding(.horizontal, 20)
                                         
-                                        // Share and View on Map buttons
-                                        HStack(spacing: 12) {
-                                            Button(action: {
-                                                HapticManager.shared.light()
-                                            }) {
-                                                VStack(spacing: 8) {
-                                                    Image(systemName: "square.and.arrow.up")
-                                                        .font(.system(size: 20))
-                                                    Text("Share")
-                                                        .font(.system(size: 14, weight: .medium))
-                                                }
-                                                .foregroundColor(.primary)
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 16)
-                                                .background(Color(.systemGray6))
-                                                .cornerRadius(16)
+                                        Button(action: {
+                                            HapticManager.shared.light()
+                                        }) {
+                                            VStack(spacing: 8) {
+                                                Image(systemName: "calendar.badge.plus")
+                                                    .font(.system(size: 20))
+                                                Text("Book")
+                                                    .font(.system(size: 14, weight: .medium))
                                             }
-                                            
-                                            Button(action: {
-                                                HapticManager.shared.light()
-                                            }) {
-                                                VStack(spacing: 8) {
-                                                    Image(systemName: "map.fill")
-                                                        .font(.system(size: 20))
-                                                    Text("View on Map")
-                                                        .font(.system(size: 14, weight: .medium))
-                                                }
-                                                .foregroundColor(.primary)
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 16)
-                                                .background(Color(.systemGray6))
-                                                .cornerRadius(16)
-                                            }
+                                            .foregroundColor(.primary)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 16)
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(16)
                                         }
-                                        .padding(.horizontal, 20)
-                                        .padding(.top, 12)
+                                        
+                                        Button(action: {
+                                            HapticManager.shared.light()
+                                        }) {
+                                            VStack(spacing: 8) {
+                                                Image(systemName: "map.fill")
+                                                    .font(.system(size: 20))
+                                                Text("Map")
+                                                    .font(.system(size: 14, weight: .medium))
+                                            }
+                                            .foregroundColor(.primary)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 16)
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(16)
+                                        }
                                     }
-                                    .padding(.top, 20)
-                                    .padding(.bottom, 40)
-                                    }
+                                    .padding(.horizontal, 20)
                                 }
-                                .frame(maxHeight: 500) // Limit height to ensure it fits on screen
-                            } else {
-                                // Insights view (scrollable)
-                                InsightsView(restaurant: restaurant)
+                                .padding(.top, 20)
+                                .padding(.bottom, 40)
                             }
                         }
                     }
                     .background(Color(.systemBackground))
-                    .cornerRadius(showingInsights ? 0 : 24, corners: [.topLeft, .topRight])
-                    .offset(y: showingInsights ? 0 : max(0, scrollOffset))
-                    .gesture(
-                        DragGesture()
-                            .onChanged { value in
-                                if !showingInsights {
-                                    scrollOffset = value.translation.height
-                                }
-                            }
-                            .onEnded { value in
-                                withAnimation(.spring()) {
-                                    if value.predictedEndTranslation.height < -100 {
-                                        HapticManager.shared.medium()
-                                        showingInsights = true
-                                        scrollOffset = 0
-                                    } else {
-                                        HapticManager.shared.light()
-                                        scrollOffset = 0
-                                    }
-                                }
-                            }
-                    )
+                    .cornerRadius(24, corners: [.topLeft, .topRight])
                 }
             }
         }

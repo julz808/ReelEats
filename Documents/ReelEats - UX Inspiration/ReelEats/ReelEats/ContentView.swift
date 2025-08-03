@@ -3,15 +3,18 @@ import Foundation
 
 struct ContentView: View {
     @StateObject private var restaurantStore = RestaurantStore()
+    @StateObject private var filterState = FilterState()
     
     var body: some View {
         Group {
             if restaurantStore.isOnboarding {
                 OnboardingCoordinator()
                     .environmentObject(restaurantStore)
+                    .environmentObject(filterState)
             } else {
                 MainTabView()
                     .environmentObject(restaurantStore)
+                    .environmentObject(filterState)
             }
         }
         .preferredColorScheme(.light)
@@ -91,31 +94,42 @@ class RestaurantStore: ObservableObject {
     @Published var collections: [Collection] = []
     
     init() {
-        // Initialize with some demo data - using first 10 restaurants
-        savedRestaurants = Array(Melbourne.demoRestaurants.prefix(10))
+        // Initialize with more demo data - using first 15 restaurants to ensure collections are well populated
+        savedRestaurants = Array(Melbourne.demoRestaurants.prefix(15))
         
-        // Create the 4 specific collections requested
+        // Create well-populated collections with multiple items each
         let dateNightRestaurants = Array(Melbourne.demoRestaurants.filter { 
-            $0.name.contains("Nobu") || $0.name.contains("Attica") || $0.name.contains("Flower Drum")
-        }.prefix(3).map { $0.id })
+            $0.name.contains("Nobu") || $0.name.contains("Attica") || $0.name.contains("Cumulus") || $0.priceRange == "$$$"
+        }.prefix(5).map { $0.id })
         
         let roadTripRestaurants = Array(Melbourne.demoRestaurants.filter { 
-            $0.name.contains("Baker Bleu") || $0.name.contains("Seven Seeds") || $0.name.contains("Market Lane")
-        }.prefix(3).map { $0.id })
+            $0.name.contains("Baker Bleu") || $0.name.contains("Seven Seeds") || $0.name.contains("Proud Mary") || $0.category == .cafe
+        }.prefix(6).map { $0.id })
         
         let barsRestaurants = Array(Melbourne.demoRestaurants.filter { 
             $0.category == .bars
         }.prefix(4).map { $0.id })
         
         let bestJapRestaurants = Array(Melbourne.demoRestaurants.filter { 
-            $0.name.contains("Nobu") || $0.name.contains("Chin Chin") || $0.name.contains("Tipo")
-        }.prefix(3).map { $0.id })
+            $0.name.contains("Nobu") || $0.name.contains("Chin Chin") || $0.name.contains("Bar Americano")
+        }.prefix(4).map { $0.id })
+        
+        // Add additional diverse collections
+        let brunchFavsRestaurants = Array(Melbourne.demoRestaurants.filter {
+            $0.name.contains("Industry Beans") || $0.name.contains("Patricia") || $0.name.contains("Seven Seeds") || $0.category == .cafe
+        }.prefix(5).map { $0.id })
+        
+        let fineDiningRestaurants = Array(Melbourne.demoRestaurants.filter {
+            $0.priceRange == "$$$" || $0.name.contains("Nobu") || $0.name.contains("Attica")
+        }.prefix(4).map { $0.id })
         
         collections = [
             Collection(name: "date night", restaurantIds: dateNightRestaurants),
             Collection(name: "road trip", restaurantIds: roadTripRestaurants),
             Collection(name: "bars", restaurantIds: barsRestaurants),
-            Collection(name: "best jap", restaurantIds: bestJapRestaurants)
+            Collection(name: "best jap", restaurantIds: bestJapRestaurants),
+            Collection(name: "brunch favs", restaurantIds: brunchFavsRestaurants),
+            Collection(name: "fine dining", restaurantIds: fineDiningRestaurants)
         ]
     }
     
