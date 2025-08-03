@@ -36,6 +36,7 @@ struct SavedTabView: View {
     @State private var selectedView: SavedViewType = .allSpots
     @State private var selectedCollection: Collection?
     @State private var showingCollectionDetail = false
+    @State private var showingProfile = false
     
     enum SavedViewType: String, CaseIterable {
         case allSpots = "All Spots"
@@ -60,11 +61,20 @@ struct SavedTabView: View {
                             
                             Spacer()
                             
-                            // Search button
-                            Button(action: {}) {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 20, weight: .medium))
-                                    .foregroundColor(.primary)
+                            // Profile button
+                            Button(action: {
+                                HapticManager.shared.light()
+                                showingProfile = true
+                            }) {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.blue, Color.purple, Color.cyan],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 32, height: 32)
                             }
                         }
                         .padding(.horizontal, 20)
@@ -165,6 +175,10 @@ struct SavedTabView: View {
                     .environmentObject(store)
             }
         }
+        .sheet(isPresented: $showingProfile) {
+            ProfileTabView()
+                .environmentObject(store)
+        }
         .onAppear {
             withAnimation(.easeInOut(duration: 0.6)) {
                 isAnimating = true
@@ -264,16 +278,6 @@ struct EmptyStateView: View {
             .padding(.horizontal, 20)
             
             Spacer()
-            
-            // Add button
-            FloatingAddButton(
-                onAddSpot: {
-                    // Add spot action
-                },
-                onCreateCollection: {
-                    // Create collection action
-                }
-            )
         }
     }
 }
@@ -299,25 +303,6 @@ struct CollectionsGridView: View {
             .padding(.top, 20)
             .padding(.bottom, 100) // Space for floating button
         }
-        .overlay(
-            // Floating add button
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    FloatingAddButton(
-                        onAddSpot: {
-                            // Add spot action
-                        },
-                        onCreateCollection: {
-                            // Create collection action
-                        }
-                    )
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 30)
-                }
-            }
-        )
     }
 }
 
@@ -654,25 +639,6 @@ struct RestaurantListView: View {
             .padding(.top, 20)
             .padding(.bottom, 100) // Space for floating button
         }
-        .overlay(
-            // Floating add button
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    FloatingAddButton(
-                        onAddSpot: {
-                            // Add spot action
-                        },
-                        onCreateCollection: {
-                            // Create collection action
-                        }
-                    )
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 30)
-                }
-            }
-        )
     }
 }
 
@@ -879,95 +845,6 @@ struct DemoRestaurantCard: View {
     }
 }
 
-// MARK: - Floating Add Button with Popup Menu
-
-struct FloatingAddButton: View {
-    let onAddSpot: () -> Void
-    let onCreateCollection: () -> Void
-    @State private var isPressed = false
-    @State private var showingMenu = false
-    
-    var body: some View {
-        ZStack {
-            // Menu options
-            if showingMenu {
-                VStack(spacing: 12) {
-                    // Create Collection option
-                    AddMenuOption(
-                        icon: "folder.badge.plus",
-                        title: "Create Collection",
-                        action: {
-                            HapticManager.shared.medium()
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showingMenu = false
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                onCreateCollection()
-                            }
-                        }
-                    )
-                    .opacity(showingMenu ? 1.0 : 0.0)
-                    .scaleEffect(showingMenu ? 1.0 : 0.1)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.1), value: showingMenu)
-                    
-                    // Add Spot option
-                    AddMenuOption(
-                        icon: "plus.circle",
-                        title: "Add Spot",
-                        action: {
-                            HapticManager.shared.medium()
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showingMenu = false
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                onAddSpot()
-                            }
-                        }
-                    )
-                    .opacity(showingMenu ? 1.0 : 0.0)
-                    .scaleEffect(showingMenu ? 1.0 : 0.1)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showingMenu)
-                    
-                    Spacer()
-                        .frame(height: 72) // Space for main button
-                }
-            }
-            
-            // Main add button
-            VStack {
-                Spacer()
-                
-                Button(action: {
-                    HapticManager.shared.light()
-                    withAnimation(.easeInOut(duration: 0.1)) {
-                        isPressed = true
-                    }
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.easeInOut(duration: 0.1)) {
-                            isPressed = false
-                        }
-                        
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            showingMenu.toggle()
-                        }
-                    }
-                }) {
-                    Image(systemName: showingMenu ? "xmark" : "plus")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 56, height: 56)
-                        .background(Color.black)
-                        .clipShape(Circle())
-                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-                        .scaleEffect(isPressed ? 0.95 : 1.0)
-                        .rotationEffect(.degrees(showingMenu ? 180 : 0))
-                }
-            }
-        }
-        .frame(width: 200, height: 200)
-    }
-}
 
 struct AddMenuOption: View {
     let icon: String
@@ -1036,6 +913,7 @@ struct MapTabView: View {
     @State private var selectedCollection: Collection?
     @State private var showingBottomSheet = false
     @State private var bottomSheetOffset: CGFloat = 350
+    @State private var showingProfile = false
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: -37.8136, longitude: 144.9631), // Melbourne CBD
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
@@ -1047,10 +925,10 @@ struct MapTabView: View {
             ModernMapView(region: $region, restaurants: filteredMapRestaurants)
             .ignoresSafeArea()
             
-            // Top overlay with collection name if selected
-            if let collection = selectedCollection {
-                VStack {
-                    HStack {
+            // Top overlay with profile button and optional collection name
+            VStack {
+                HStack {
+                    if let collection = selectedCollection {
                         Text(collection.name)
                             .font(.system(size: 24, weight: .semibold))
                             .foregroundColor(.primary)
@@ -1058,14 +936,30 @@ struct MapTabView: View {
                             .padding(.vertical, 10)
                             .background(Color(.systemBackground))
                             .cornerRadius(20)
-                        
-                        Spacer()
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 60)
                     
                     Spacer()
+                    
+                    // Profile button
+                    Button(action: {
+                        HapticManager.shared.light()
+                        showingProfile = true
+                    }) {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.purple, Color.cyan],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 32, height: 32)
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 60)
+                
+                Spacer()
             }
             
             // Bottom sheet with collections and categories
@@ -1213,6 +1107,10 @@ struct MapTabView: View {
             withAnimation(.spring()) {
                 bottomSheetOffset = 200
             }
+        }
+        .sheet(isPresented: $showingProfile) {
+            ProfileTabView()
+                .environmentObject(store)
         }
     }
     
@@ -1640,6 +1538,210 @@ struct SettingsRow: View {
             Spacer()
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Custom Bottom Navigation Bar
+
+struct CustomBottomNavBar: View {
+    @Binding var selectedTab: Int
+    @Binding var showingAddMenu: Bool
+    let onManualSearch: () -> Void
+    let onCreateCollection: () -> Void
+    let onScanCollection: () -> Void
+    
+    var body: some View {
+        ZStack {
+            // Bottom bar background
+            HStack {
+                Spacer()
+            }
+            .frame(height: 90)
+            .background(
+                RoundedRectangle(cornerRadius: 0)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: -1)
+            )
+            
+            // Navigation items
+            HStack {
+                // Saved tab
+                Spacer()
+                
+                TabBarItem(
+                    icon: selectedTab == 0 ? "bookmark.fill" : "bookmark",
+                    title: "Saved",
+                    isSelected: selectedTab == 0
+                ) {
+                    HapticManager.shared.selection()
+                    selectedTab = 0
+                }
+                
+                Spacer()
+                
+                // Floating + button (elevated)
+                VStack {
+                    FloatingCenterButton(
+                        showingMenu: $showingAddMenu,
+                        onManualSearch: onManualSearch,
+                        onCreateCollection: onCreateCollection,
+                        onScanCollection: onScanCollection
+                    )
+                    
+                    Spacer()
+                        .frame(height: 20)
+                }
+                
+                Spacer()
+                
+                // Map tab
+                TabBarItem(
+                    icon: selectedTab == 1 ? "map.fill" : "map",
+                    title: "Map",
+                    isSelected: selectedTab == 1
+                ) {
+                    HapticManager.shared.selection()
+                    selectedTab = 1
+                }
+                
+                Spacer()
+            }
+            .padding(.bottom, 30)
+        }
+    }
+}
+
+// MARK: - Tab Bar Item
+
+struct TabBarItem: View {
+    let icon: String
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundColor(isSelected ? .black : .gray)
+                
+                Text(title)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(isSelected ? .black : .gray)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Floating Center Button
+
+struct FloatingCenterButton: View {
+    @Binding var showingMenu: Bool
+    let onManualSearch: () -> Void
+    let onCreateCollection: () -> Void
+    let onScanCollection: () -> Void
+    @State private var isPressed = false
+    
+    var body: some View {
+        ZStack {
+            // Menu options (appear above the button)
+            if showingMenu {
+                VStack(spacing: 12) {
+                    // Scan Collection option
+                    AddMenuOption(
+                        icon: "qrcode.viewfinder",
+                        title: "Scan Collection",
+                        action: {
+                            HapticManager.shared.medium()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showingMenu = false
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                onScanCollection()
+                            }
+                        }
+                    )
+                    .opacity(showingMenu ? 1.0 : 0.0)
+                    .scaleEffect(showingMenu ? 1.0 : 0.1)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.2), value: showingMenu)
+                    
+                    // Create Collection option
+                    AddMenuOption(
+                        icon: "folder.badge.plus",
+                        title: "Create Collection",
+                        action: {
+                            HapticManager.shared.medium()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showingMenu = false
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                onCreateCollection()
+                            }
+                        }
+                    )
+                    .opacity(showingMenu ? 1.0 : 0.0)
+                    .scaleEffect(showingMenu ? 1.0 : 0.1)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.1), value: showingMenu)
+                    
+                    // Manual Search option
+                    AddMenuOption(
+                        icon: "magnifyingglass.circle",
+                        title: "Manual Search",
+                        action: {
+                            HapticManager.shared.medium()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showingMenu = false
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                onManualSearch()
+                            }
+                        }
+                    )
+                    .opacity(showingMenu ? 1.0 : 0.0)
+                    .scaleEffect(showingMenu ? 1.0 : 0.1)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showingMenu)
+                    
+                    Spacer()
+                        .frame(height: 80) // Space for main button
+                }
+            }
+            
+            // Main floating + button (elevated above tab bar)
+            VStack {
+                Spacer()
+                
+                Button(action: {
+                    HapticManager.shared.light()
+                    withAnimation(.easeInOut(duration: 0.1)) {
+                        isPressed = true
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.easeInOut(duration: 0.1)) {
+                            isPressed = false
+                        }
+                        
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            showingMenu.toggle()
+                        }
+                    }
+                }) {
+                    Image(systemName: showingMenu ? "xmark" : "plus")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 64, height: 64)
+                        .background(Color.black)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
+                        .scaleEffect(isPressed ? 0.95 : 1.0)
+                        .rotationEffect(.degrees(showingMenu ? 180 : 0))
+                }
+                .offset(y: -10) // Elevated above the tab bar
+            }
+        }
+        .frame(width: 250, height: 250)
     }
 }
 

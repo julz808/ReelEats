@@ -23,33 +23,47 @@ struct ContentView: View {
 struct MainTabView: View {
     @EnvironmentObject var store: RestaurantStore
     @State private var selectedTab = 0
+    @State private var showingAddMenu = false
+    @State private var showingProfile = false
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            SavedTabView()
-                .tabItem {
-                    Image(systemName: selectedTab == 0 ? "bookmark.fill" : "bookmark")
-                        .font(.system(size: 20))
+        ZStack {
+            // Main content
+            Group {
+                if selectedTab == 0 {
+                    SavedTabView()
+                        .environmentObject(store)
+                } else {
+                    MapTabView()
+                        .environmentObject(store)
                 }
-                .tag(0)
+            }
             
-            MapTabView()
-                .tabItem {
-                    Image(systemName: selectedTab == 1 ? "map.fill" : "map")
-                        .font(.system(size: 20))
-                }
-                .tag(1)
-            
-            ProfileTabView()
-                .tabItem {
-                    Image(systemName: selectedTab == 2 ? "person.fill" : "person")
-                        .font(.system(size: 20))
-                }
-                .tag(2)
+            // Custom bottom navigation with floating + button
+            VStack {
+                Spacer()
+                
+                CustomBottomNavBar(
+                    selectedTab: $selectedTab,
+                    showingAddMenu: $showingAddMenu,
+                    onManualSearch: {
+                        // Handle manual search
+                        print("Manual search tapped")
+                    },
+                    onCreateCollection: {
+                        // Handle create collection
+                        print("Create collection tapped")
+                    },
+                    onScanCollection: {
+                        // Handle scan collection
+                        print("Scan collection tapped")
+                    }
+                )
+            }
         }
-        .accentColor(.black)
-        .onChange(of: selectedTab) { _ in
-            HapticManager.shared.selection()
+        .sheet(isPresented: $showingProfile) {
+            ProfileTabView()
+                .environmentObject(store)
         }
         .onAppear {
             store.completeSetup()
