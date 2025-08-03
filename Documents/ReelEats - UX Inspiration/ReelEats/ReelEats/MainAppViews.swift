@@ -44,28 +44,28 @@ struct SavedTabView: View {
     }
     
     var body: some View {
-        NavigationView {
-            GeometryReader { geometry in
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                // Header with logo and profile - positioned at very top
                 VStack(spacing: 0) {
-                    // Header with logo and search
-                    VStack(spacing: 0) {
-                        HStack {
-                            // ReelEats logo with mascot
-                            HStack(spacing: 8) {
-                                MascotView(size: 28)
-                                
-                                Text("ReelEats")
-                                    .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(.primary)
-                            }
+                    HStack {
+                        // ReelEats logo with mascot
+                        HStack(spacing: 8) {
+                            MascotView(size: 28)
                             
-                            Spacer()
-                            
-                            // Profile button
-                            Button(action: {
-                                HapticManager.shared.light()
-                                showingProfile = true
-                            }) {
+                            Text("ReelEats")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.primary)
+                        }
+                        
+                        Spacer()
+                        
+                        // Profile button with person icon
+                        Button(action: {
+                            HapticManager.shared.light()
+                            showingProfile = true
+                        }) {
+                            ZStack {
                                 Circle()
                                     .fill(
                                         LinearGradient(
@@ -75,94 +75,100 @@ struct SavedTabView: View {
                                         )
                                     )
                                     .frame(width: 32, height: 32)
+                                
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.white)
                             }
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 8)
-                        
-                        // View toggle (All Spots / Collections)
-                        HStack(spacing: 0) {
-                            ForEach(SavedViewType.allCases, id: \.self) { viewType in
-                                Button(action: {
-                                    HapticManager.shared.selection()
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        selectedView = viewType
-                                    }
-                                }) {
-                                    Text(viewType.rawValue)
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(selectedView == viewType ? .primary : .secondary)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 50)
+                    
+                    // View toggle (All Spots / Collections)
+                    HStack(spacing: 0) {
+                        ForEach(SavedViewType.allCases, id: \.self) { viewType in
+                            Button(action: {
+                                HapticManager.shared.selection()
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedView = viewType
                                 }
+                            }) {
+                                Text(viewType.rawValue)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(selectedView == viewType ? .primary : .secondary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
                             }
                         }
-                        .background(
-                            GeometryReader { geometry in
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.primary)
-                                    .frame(width: geometry.size.width / 2, height: 2)
-                                    .offset(x: selectedView == .allSpots ? 0 : geometry.size.width / 2)
-                                    .animation(.easeInOut(duration: 0.2), value: selectedView)
-                            }
-                            .frame(height: 2),
-                            alignment: .bottom
-                        )
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
-                        
-                        // Category filters - only show for All Spots view
-                        if selectedView == .allSpots {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(RestaurantCategory.allCases, id: \.self) { category in
-                                        CategoryFilterButton(
-                                            category: category,
-                                            isSelected: selectedCategory == category
-                                        ) {
-                                            HapticManager.shared.selection()
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                selectedCategory = category
-                                            }
+                    }
+                    .background(
+                        GeometryReader { geometry in
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.primary)
+                                .frame(width: geometry.size.width / 2, height: 2)
+                                .offset(x: selectedView == .allSpots ? 0 : geometry.size.width / 2)
+                                .animation(.easeInOut(duration: 0.2), value: selectedView)
+                        }
+                        .frame(height: 2),
+                        alignment: .bottom
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    
+                    // Category filters - only show for All Spots view
+                    if selectedView == .allSpots {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(RestaurantCategory.allCases, id: \.self) { category in
+                                    CategoryFilterButton(
+                                        category: category,
+                                        isSelected: selectedCategory == category
+                                    ) {
+                                        HapticManager.shared.selection()
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            selectedCategory = category
                                         }
                                     }
                                 }
-                                .padding(.horizontal, 20)
                             }
-                            .padding(.top, 16)
+                            .padding(.horizontal, 20)
                         }
+                        .padding(.top, 16)
                     }
-                    .background(Color(.systemBackground))
-                    
-                    // Content area
-                    if selectedView == .allSpots {
-                        if filteredRestaurants.isEmpty {
-                            EmptyStateView()
-                                .transition(.opacity)
-                        } else {
-                            RestaurantListView(
-                                restaurants: filteredRestaurants,
-                                onRestaurantTap: { restaurant in
-                                    selectedRestaurant = restaurant
-                                    showingDetail = true
-                                }
-                            )
+                }
+                .background(Color(.systemBackground))
+                
+                // Content area
+                if selectedView == .allSpots {
+                    if filteredRestaurants.isEmpty {
+                        EmptyStateView()
                             .transition(.opacity)
-                        }
                     } else {
-                        CollectionsGridView(
-                            collections: store.collections,
-                            onCollectionTap: { collection in
-                                selectedCollection = collection
-                                showingCollectionDetail = true
+                        RestaurantListView(
+                            restaurants: filteredRestaurants,
+                            onRestaurantTap: { restaurant in
+                                selectedRestaurant = restaurant
+                                showingDetail = true
                             }
                         )
                         .transition(.opacity)
                     }
+                } else {
+                    CollectionsGridView(
+                        collections: store.collections,
+                        onCollectionTap: { collection in
+                            selectedCollection = collection
+                            showingCollectionDetail = true
+                        }
+                    )
+                    .transition(.opacity)
+                }
                 }
             }
         }
         .navigationBarHidden(true)
+        .edgesIgnoringSafeArea(.top)
         .sheet(isPresented: $showingDetail) {
             if let restaurant = selectedRestaurant {
                 RestaurantDetailView(restaurant: restaurant)
@@ -940,24 +946,30 @@ struct MapTabView: View {
                     
                     Spacer()
                     
-                    // Profile button
+                    // Profile button with person icon - positioned at top right
                     Button(action: {
                         HapticManager.shared.light()
                         showingProfile = true
                     }) {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.blue, Color.purple, Color.cyan],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.blue, Color.purple, Color.cyan],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                                 )
-                            )
-                            .frame(width: 32, height: 32)
+                                .frame(width: 32, height: 32)
+                            
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 60)
+                .padding(.top, 50)
                 
                 Spacer()
             }
@@ -1552,35 +1564,37 @@ struct CustomBottomNavBar: View {
     
     var body: some View {
         ZStack {
-            // Bottom bar background
-            HStack {
+            // Bottom bar background - extends to bottom edge of screen
+            VStack {
                 Spacer()
-            }
-            .frame(height: 90)
-            .background(
-                RoundedRectangle(cornerRadius: 0)
+                Rectangle()
                     .fill(Color(.systemBackground))
+                    .frame(height: 100)
                     .shadow(color: .black.opacity(0.1), radius: 1, x: 0, y: -1)
-            )
+            }
+            .ignoresSafeArea(.container, edges: .bottom)
             
-            // Navigation items
-            HStack {
-                // Saved tab
+            // Navigation items positioned correctly
+            VStack {
                 Spacer()
                 
-                TabBarItem(
-                    icon: selectedTab == 0 ? "bookmark.fill" : "bookmark",
-                    title: "Saved",
-                    isSelected: selectedTab == 0
-                ) {
-                    HapticManager.shared.selection()
-                    selectedTab = 0
-                }
-                
-                Spacer()
-                
-                // Floating + button (elevated)
-                VStack {
+                HStack(spacing: 0) {
+                    // Saved tab - positioned closer to center
+                    HStack {
+                        Spacer()
+                        TabBarItem(
+                            icon: selectedTab == 0 ? "bookmark.fill" : "bookmark",
+                            title: "Saved",
+                            isSelected: selectedTab == 0
+                        ) {
+                            HapticManager.shared.selection()
+                            selectedTab = 0
+                        }
+                        Spacer()
+                        Spacer()
+                    }
+                    
+                    // Center floating + button
                     FloatingCenterButton(
                         showingMenu: $showingAddMenu,
                         onManualSearch: onManualSearch,
@@ -1588,25 +1602,23 @@ struct CustomBottomNavBar: View {
                         onScanCollection: onScanCollection
                     )
                     
-                    Spacer()
-                        .frame(height: 20)
+                    // Map tab - positioned closer to center
+                    HStack {
+                        Spacer()
+                        Spacer()
+                        TabBarItem(
+                            icon: selectedTab == 1 ? "map.fill" : "map",
+                            title: "Map",
+                            isSelected: selectedTab == 1
+                        ) {
+                            HapticManager.shared.selection()
+                            selectedTab = 1
+                        }
+                        Spacer()
+                    }
                 }
-                
-                Spacer()
-                
-                // Map tab
-                TabBarItem(
-                    icon: selectedTab == 1 ? "map.fill" : "map",
-                    title: "Map",
-                    isSelected: selectedTab == 1
-                ) {
-                    HapticManager.shared.selection()
-                    selectedTab = 1
-                }
-                
-                Spacer()
+                .padding(.bottom, 30)
             }
-            .padding(.bottom, 30)
         }
     }
 }
@@ -1645,21 +1657,21 @@ struct FloatingCenterButton: View {
     @State private var isPressed = false
     
     var body: some View {
-        ZStack {
+        VStack {
             // Menu options (appear above the button)
             if showingMenu {
                 VStack(spacing: 12) {
-                    // Scan Collection option
+                    // Add Spot option (was Manual Search) - now first
                     AddMenuOption(
-                        icon: "qrcode.viewfinder",
-                        title: "Scan Collection",
+                        icon: "plus.circle",
+                        title: "Add Spot",
                         action: {
                             HapticManager.shared.medium()
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 showingMenu = false
                             }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                onScanCollection()
+                                onManualSearch()
                             }
                         }
                     )
@@ -1667,7 +1679,7 @@ struct FloatingCenterButton: View {
                     .scaleEffect(showingMenu ? 1.0 : 0.1)
                     .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.2), value: showingMenu)
                     
-                    // Create Collection option
+                    // Create Collection option - second
                     AddMenuOption(
                         icon: "folder.badge.plus",
                         title: "Create Collection",
@@ -1685,63 +1697,56 @@ struct FloatingCenterButton: View {
                     .scaleEffect(showingMenu ? 1.0 : 0.1)
                     .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.1), value: showingMenu)
                     
-                    // Manual Search option
+                    // Scan Collection option - third
                     AddMenuOption(
-                        icon: "magnifyingglass.circle",
-                        title: "Manual Search",
+                        icon: "qrcode.viewfinder",
+                        title: "Scan Collection",
                         action: {
                             HapticManager.shared.medium()
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 showingMenu = false
                             }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                onManualSearch()
+                                onScanCollection()
                             }
                         }
                     )
                     .opacity(showingMenu ? 1.0 : 0.0)
                     .scaleEffect(showingMenu ? 1.0 : 0.1)
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showingMenu)
-                    
-                    Spacer()
-                        .frame(height: 80) // Space for main button
                 }
+                .offset(y: -30)
             }
             
-            // Main floating + button (elevated above tab bar)
-            VStack {
-                Spacer()
+            // Main floating + button positioned at the top edge of nav bar
+            Button(action: {
+                HapticManager.shared.light()
+                withAnimation(.easeInOut(duration: 0.1)) {
+                    isPressed = true
+                }
                 
-                Button(action: {
-                    HapticManager.shared.light()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation(.easeInOut(duration: 0.1)) {
-                        isPressed = true
+                        isPressed = false
                     }
                     
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.easeInOut(duration: 0.1)) {
-                            isPressed = false
-                        }
-                        
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            showingMenu.toggle()
-                        }
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        showingMenu.toggle()
                     }
-                }) {
-                    Image(systemName: showingMenu ? "xmark" : "plus")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(width: 64, height: 64)
-                        .background(Color.black)
-                        .clipShape(Circle())
-                        .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
-                        .scaleEffect(isPressed ? 0.95 : 1.0)
-                        .rotationEffect(.degrees(showingMenu ? 180 : 0))
                 }
-                .offset(y: -10) // Elevated above the tab bar
+            }) {
+                Image(systemName: showingMenu ? "xmark" : "plus")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Color.black)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
+                    .scaleEffect(isPressed ? 0.95 : 1.0)
+                    .rotationEffect(.degrees(showingMenu ? 180 : 0))
             }
+            .offset(y: -40) // Elevated above the tab bar - positioned at top edge
         }
-        .frame(width: 250, height: 250)
     }
 }
 
