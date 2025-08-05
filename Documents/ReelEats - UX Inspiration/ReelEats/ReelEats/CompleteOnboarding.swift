@@ -82,7 +82,7 @@ struct WelcomeScreen: View {
                 VStack(spacing: 20) {
                     HStack(spacing: 6) {
                         Text("ReelEats")
-                            .font(.system(size: 52, weight: .bold))
+                            .font(.poppinsLogoTemp(size: 52))
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [.primary, .primary.opacity(0.7)],
@@ -100,7 +100,7 @@ struct WelcomeScreen: View {
                     .animation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.4), value: isAnimating)
                     
                     Text("From feed to fed")
-                        .font(.system(size: 22, weight: .medium))
+                        .font(.poppinsBodyTemp(size: 22))
                         .foregroundColor(.secondary)
                         .opacity(isAnimating ? 1.0 : 0.0)
                         .offset(y: isAnimating ? 0 : 20)
@@ -115,7 +115,7 @@ struct WelcomeScreen: View {
                     onNext()
                 }) {
                     Text("Get Started")
-                        .font(.system(size: 19, weight: .semibold))
+                        .font(.poppinsAccentTemp(size: 19))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 60)
@@ -179,11 +179,11 @@ struct AuthScreen: View {
                 VStack(spacing: 36) {
                     VStack(spacing: 18) {
                         Text("Sign in to continue")
-                            .font(.system(size: 28, weight: .bold))
+                            .font(.poppinsHeaderTemp(size: 28))
                             .foregroundColor(.primary)
                         
                         Text("By continuing, you agree to our terms of service, privacy policy and marketing emails which you can unsubscribe at any time.")
-                            .font(.system(size: 16))
+                            .font(.poppinsBodyTemp(size: 16))
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .lineSpacing(3)

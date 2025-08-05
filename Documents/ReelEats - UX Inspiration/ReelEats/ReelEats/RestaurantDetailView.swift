@@ -84,7 +84,7 @@ struct RestaurantDetailView: View {
                                 // Restaurant name
                                 HStack {
                                     Text(restaurant.name)
-                                        .font(.system(size: 28, weight: .bold))
+                                        .font(.poppinsRestaurantNameTemp(size: 28))
                                         .foregroundColor(.primary)
                                     
                                     Spacer()
@@ -123,7 +123,7 @@ struct RestaurantDetailView: View {
                                 
                                 // Description
                                 Text(restaurant.description)
-                                    .font(.system(size: 16))
+                                    .font(.poppinsDescriptionTemp(size: 16))
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 30)
@@ -137,7 +137,7 @@ struct RestaurantDetailView: View {
                                         .foregroundColor(.secondary)
                                     
                                     Text(restaurant.address)
-                                        .font(.system(size: 16))
+                                        .font(.poppinsSmallTemp(size: 16))
                                         .foregroundColor(.secondary)
                                 }
                                 .padding(.top, 10)
@@ -161,7 +161,7 @@ struct RestaurantDetailView: View {
                                                 .font(.system(size: 18, weight: .medium))
                                             
                                             Text("Add to Collection")
-                                                .font(.system(size: 18, weight: .semibold))
+                                                .font(.poppinsAccentTemp(size: 18))
                                         }
                                         .foregroundColor(.white)
                                         .frame(maxWidth: .infinity)
@@ -345,7 +345,7 @@ struct CollectionRow: View {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(collection.name)
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.poppinsCollectionNameTemp(size: 18))
                         .foregroundColor(.primary)
                     
                     Text("\(collection.restaurantIds.count) spots")
@@ -535,7 +535,7 @@ struct InsightsView: View {
                 Spacer()
                 
                 Text(restaurant.name)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.poppinsRestaurantNameTemp(size: 18))
                     .lineLimit(1)
                 
                 Spacer()
@@ -566,7 +566,7 @@ struct InsightsView: View {
                                 .foregroundColor(.white)
                             
                             Text(restaurant.description)
-                                .font(.system(size: 18, weight: .medium))
+                                .font(.poppinsDescriptionTemp(size: 18))
                                 .foregroundColor(.white)
                         }
                         .padding(20)
@@ -655,10 +655,10 @@ struct InsightsView: View {
                         }
                         
                         Text(restaurant.name)
-                            .font(.system(size: 24, weight: .bold))
+                            .font(.poppinsRestaurantNameTemp(size: 24))
                         
                         Text(restaurant.description)
-                            .font(.system(size: 16))
+                            .font(.poppinsDescriptionTemp(size: 16))
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }

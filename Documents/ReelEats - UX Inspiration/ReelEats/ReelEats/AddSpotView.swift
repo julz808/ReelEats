@@ -424,12 +424,32 @@ struct AddSpotDetailView: View {
         }
     }
     
+    private func getEmojiForCategory(_ category: RestaurantCategory) -> String {
+        switch category {
+        case .all:
+            return "🍽️"
+        case .restaurants:
+            return "🍽️"
+        case .cafe:
+            return "☕"
+        case .bars:
+            return "🍸"
+        case .desserts:
+            return "🧁"
+        case .fastfood:
+            return "🍔"
+        case .finedining:
+            return "🥂"
+        }
+    }
+    
     private func addToSaved() {
         // Convert MockLocationResult to Restaurant
         let restaurant = Restaurant(
             name: location.name,
             category: location.category,
             imageURL: location.imageURL ?? "",
+            emoji: getEmojiForCategory(location.category),
             description: location.description.isEmpty ? "Added from search" : location.description,
             rating: location.rating,
             priceRange: "$$",

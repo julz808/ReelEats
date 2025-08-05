@@ -31,16 +31,19 @@ struct MainTabView: View {
     @State private var showingAddSpot = false
     @State private var showingCreateCollection = false
     @State private var showingScanCollection = false
+    @State private var selectedRestaurantForMap: Restaurant?
     
     var body: some View {
         ZStack {
             // Main content
             Group {
                 if selectedTab == 0 {
-                    SavedTabView()
+                    // Home tab
+                    HomeTabView(selectedRestaurant: $selectedRestaurantForMap)
                         .environmentObject(store)
-                } else {
-                    MapTabView()
+                } else if selectedTab == 1 {
+                    // Map tab
+                    MapTabView(selectedRestaurant: $selectedRestaurantForMap)
                         .environmentObject(store)
                 }
             }
@@ -92,6 +95,7 @@ class RestaurantStore: ObservableObject {
     @Published var isOnboarding: Bool = true
     @Published var savedRestaurants: [Restaurant] = []
     @Published var collections: [Collection] = []
+    @Published var userInteractions: [RestaurantUserData] = []
     
     init() {
         // Initialize with more demo data - using first 15 restaurants to ensure collections are well populated
@@ -155,6 +159,46 @@ class RestaurantStore: ObservableObject {
     func addRestaurantToCollection(restaurant: Restaurant, collection: Collection) {
         // In a real app, this would update the collection's restaurantIds
         print("Added \(restaurant.name) to \(collection.name)")
+    }
+    
+    // MARK: - User Data Management
+    
+    func getUserData(for restaurantId: UUID) -> RestaurantUserData? {
+        return userInteractions.first { $0.restaurantId == restaurantId }
+    }
+    
+    func updateVisitStatus(for restaurantId: UUID, status: VisitStatus) {
+        if let index = userInteractions.firstIndex(where: { $0.restaurantId == restaurantId }) {
+            userInteractions[index].visitStatus = status
+            if status == .visited {
+                userInteractions[index].dateVisited = Date()
+            } else {
+                userInteractions[index].dateVisited = nil
+                userInteractions[index].userRating = 0.0
+            }
+        } else {
+            let newUserData = RestaurantUserData(
+                restaurantId: restaurantId,
+                visitStatus: status,
+                userRating: 0.0,
+                dateVisited: status == .visited ? Date() : nil
+            )
+            userInteractions.append(newUserData)
+        }
+    }
+    
+    func updateUserRating(for restaurantId: UUID, rating: Double) {
+        if let index = userInteractions.firstIndex(where: { $0.restaurantId == restaurantId }) {
+            userInteractions[index].userRating = rating
+        } else {
+            let newUserData = RestaurantUserData(
+                restaurantId: restaurantId,
+                visitStatus: .visited,
+                userRating: rating,
+                dateVisited: Date()
+            )
+            userInteractions.append(newUserData)
+        }
     }
 }
 
