@@ -353,7 +353,7 @@ struct HomeTabView: View {
                 .environmentObject(store)
         }
         .sheet(item: $selectedRestaurantForDetail) { restaurant in
-            RestaurantDetailView(restaurant: restaurant)
+            FullScreenRestaurantDetailView(restaurant: restaurant)
                 .environmentObject(store)
         }
         .fullScreenCover(item: $selectedCollection) { collection in
@@ -362,6 +362,10 @@ struct HomeTabView: View {
                 showingListView = false
                 selectedCollection = nil
             })
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showingProfile) {
+            ProfileTabView()
                 .environmentObject(store)
         }
     }
@@ -689,10 +693,10 @@ struct UberEatsBottomSheetOverlay<Content: View>: View {
         ZStack {
             if isPresented {
                 // Background overlay - darkens the screen
-                Color.black.opacity(0.4)
+                Color.black.opacity(0.3)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.3)) {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                             isPresented = false
                         }
                     }
@@ -704,15 +708,15 @@ struct UberEatsBottomSheetOverlay<Content: View>: View {
                     VStack(spacing: 0) {
                         // Handle bar
                         RoundedRectangle(cornerRadius: 2.5)
-                            .fill(Color(.systemGray4))
-                            .frame(width: 36, height: 4)
-                            .padding(.top, 12)
-                            .padding(.bottom, 16)
+                            .fill(Color(.systemGray3))
+                            .frame(width: 40, height: 4)
+                            .padding(.top, 8)
+                            .padding(.bottom, 12)
                         
                         // Title
                         HStack {
                             Text(title)
-                                .font(.system(size: 20, weight: .semibold))
+                                .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(.primary)
                             
                             Spacer()
@@ -737,14 +741,14 @@ struct UberEatsBottomSheetOverlay<Content: View>: View {
                         content()
                     }
                     .background(Color(.systemBackground))
-                    .cornerRadius(20, corners: [.topLeft, .topRight])
-                    .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: -5)
+                    .cornerRadius(16, corners: [.topLeft, .topRight])
+                    .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: -4)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .padding(.bottom, 100) // Add padding to avoid bottom nav bar overlap
+                    .padding(.bottom, 85) // Position just above bottom nav bar
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: isPresented)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPresented)
     }
 }
 
@@ -915,7 +919,10 @@ struct SpotsListContent: View {
     var body: some View {
         if isGridView {
             // Grid view - 3 cards per row, Spotify-style
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), 
+                spacing: 16
+            ) {
                 ForEach(sortedRestaurants) { restaurant in
                     RestaurantGridCard(restaurant: restaurant)
                         .environmentObject(store)
@@ -951,52 +958,59 @@ struct RestaurantGridCard: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Image section
+            // Image section - Square aspect ratio for consistency
             AsyncImage(url: URL(string: restaurant.imageURL)) { image in
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } placeholder: {
                 Rectangle()
-                    .fill(restaurant.category.color.opacity(0.3))
+                    .fill(restaurant.category.color.opacity(0.2))
                     .overlay(
                         Image(systemName: restaurant.category.icon)
-                            .font(.system(size: 24))
+                            .font(.system(size: 20))
                             .foregroundColor(restaurant.category.color)
                     )
             }
-            .frame(height: 100)
-            .clipped()
+            .aspectRatio(1.0, contentMode: .fit) // Square image
+            .clipShape(RoundedRectangle(cornerRadius: 8))
             
-            // Content section
-            VStack(alignment: .leading, spacing: 6) {
+            // Content section with fixed height
+            VStack(alignment: .leading, spacing: 4) {
                 Text(restaurant.name)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
                 
-                HStack(spacing: 4) {
+                HStack(spacing: 3) {
                     Image(systemName: "star.fill")
-                        .font(.system(size: 10))
+                        .font(.system(size: 9))
                         .foregroundColor(.yellow)
                     
                     Text(String(format: "%.1f", restaurant.rating))
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
+                    
+                    Spacer()
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 50) // Fixed height for consistent card sizes
+            
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity)
         .background(Color(.systemBackground))
-        .cornerRadius(12)
+        .cornerRadius(10)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(.systemGray5), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(.systemGray6), lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
     }
 }
 
