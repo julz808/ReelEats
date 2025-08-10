@@ -13,20 +13,20 @@ struct ScanCollectionView: View {
                 
                 // QR Code icon
                 Image(systemName: "qrcode.viewfinder")
-                    .font(.system(size: 80))
+                    .font(.clashDisplayHeaderTemp(size: 80))
                     .foregroundColor(.orange)
                 
                 VStack(spacing: 16) {
                     Text("Scan Collection")
-                        .font(.system(size: 24, weight: .bold))
+                        .font(.clashDisplayHeaderTemp())
                         .foregroundColor(.primary)
                     
                     Text("Coming Soon!")
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.clashDisplayBodyTemp(size: 18))
                         .foregroundColor(.secondary)
                     
                     Text("Point your camera at a friend's collection QR code to instantly add their favorite spots to your saved list.")
-                        .font(.system(size: 16))
+                        .font(.clashDisplayBodyTemp())
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
@@ -39,7 +39,7 @@ struct ScanCollectionView: View {
                     dismiss()
                 }) {
                     Text("Close")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.clashDisplayButtonTemp(size: 18))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)

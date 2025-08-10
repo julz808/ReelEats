@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import PhotosUI
 
 // MARK: - Restaurant Detail View (Matching Screenshots)
 
@@ -8,6 +9,8 @@ struct RestaurantDetailView: View {
     @EnvironmentObject var store: RestaurantStore
     @Environment(\.dismiss) private var dismiss
     @State private var showingCollectionPicker = false
+    @State private var userNotes: String = ""
+    @State private var userRating: Double = 0.0
     
     var body: some View {
         GeometryReader { geometry in
@@ -29,7 +32,7 @@ struct RestaurantDetailView: View {
                                 .fill(restaurant.category.color.opacity(0.3))
                                 .overlay(
                                     Image(systemName: restaurant.category.icon)
-                                        .font(.system(size: 60))
+                                        .font(.clashDisplayHeaderTemp(size: 60))
                                         .foregroundColor(restaurant.category.color)
                                 )
                         }
@@ -42,7 +45,7 @@ struct RestaurantDetailView: View {
                             dismiss()
                         }) {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 28))
+                                .font(.clashDisplayHeaderTemp(size: 28))
                                 .foregroundColor(.white)
                                 .background(Color.black.opacity(0.3))
                                 .clipShape(Circle())
@@ -67,9 +70,9 @@ struct RestaurantDetailView: View {
                                 HStack {
                                     HStack(spacing: 4) {
                                         Image(systemName: restaurant.category.icon)
-                                            .font(.system(size: 14, weight: .medium))
+                                            .font(.clashDisplaySecondaryTemp())
                                         Text(restaurant.tags.first ?? restaurant.category.rawValue)
-                                            .font(.system(size: 14, weight: .medium))
+                                            .font(.clashDisplaySecondaryTemp())
                                     }
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 12)
@@ -90,7 +93,7 @@ struct RestaurantDetailView: View {
                                     Spacer()
                                     
                                     Image(systemName: "star.fill")
-                                        .font(.system(size: 20))
+                                        .font(.clashDisplayRestaurantNameTemp(size: 20))
                                         .foregroundColor(.yellow)
                                 }
                                 .padding(.horizontal, 20)
@@ -98,18 +101,18 @@ struct RestaurantDetailView: View {
                                 // Source info
                                 HStack(spacing: 16) {
                                     Image(systemName: restaurant.source.icon)
-                                        .font(.system(size: 18))
+                                        .font(.clashDisplayBodyTemp(size: 18))
                                         .foregroundColor(.secondary)
                                     
                                     Spacer()
                                     
                                     HStack(spacing: 20) {
                                         Image(systemName: "ellipsis")
-                                            .font(.system(size: 18))
+                                            .font(.clashDisplayBodyTemp(size: 18))
                                             .foregroundColor(.secondary)
                                         
                                         Text(restaurant.source.displayName)
-                                            .font(.system(size: 14))
+                                            .font(.clashDisplaySecondaryTemp())
                                             .foregroundColor(.secondary)
                                             .padding(.horizontal, 12)
                                             .padding(.vertical, 4)
@@ -121,19 +124,81 @@ struct RestaurantDetailView: View {
                                 }
                                 .padding(.horizontal, 20)
                                 
-                                // Description
+                                // Description (now italic)
                                 Text(restaurant.description)
                                     .font(.poppinsDescriptionTemp(size: 16))
+                                    .italic()
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 30)
                                     .padding(.top, 8)
                                     .lineLimit(3)
                                 
+                                // Reserve Action Button (moved from four-button row)
+                                Button(action: {
+                                    HapticManager.shared.light()
+                                }) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "calendar.badge.plus")
+                                            .font(.clashDisplayBodyTemp(size: 18))
+                                            .foregroundColor(.primary)
+                                        
+                                        Text("Reserve")
+                                            .font(.clashDisplaySecondaryTemp())
+                                            .foregroundColor(.primary)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(20)
+                                }
+                                .padding(.top, 12)
+                                
+                                // User Rating Section
+                                VStack(spacing: 12) {
+                                    Text("Your Rating")
+                                        .font(.clashDisplayButtonTemp())
+                                        .foregroundColor(.primary)
+                                    
+                                    StarRatingView(rating: $userRating)
+                                        .padding(.horizontal, 20)
+                                }
+                                .padding(.top, 20)
+                                
+                                // Notes Section
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Notes")
+                                        .font(.clashDisplayButtonTemp())
+                                        .foregroundColor(.primary)
+                                    
+                                    TextField("Add your notes about this spot...", text: $userNotes, axis: .vertical)
+                                        .textFieldStyle(.roundedBorder)
+                                        .lineLimit(3...6)
+                                        .font(.clashDisplayBodyTemp())
+                                }
+                                .padding(.horizontal, 30)
+                                .padding(.top, 20)
+                                
+                                // Reserve CTA Button
+                                Button(action: {
+                                    // TODO: Handle reservation
+                                    HapticManager.shared.medium()
+                                }) {
+                                    Text("Reserve")
+                                        .font(.clashDisplayButtonTemp(size: 18))
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 16)
+                                        .background(Color.reelEatsAccent)
+                                        .cornerRadius(16)
+                                }
+                                .padding(.horizontal, 30)
+                                .padding(.top, 24)
+                                
                                 // Address
                                 HStack {
                                     Image(systemName: "location.fill")
-                                        .font(.system(size: 16))
+                                        .font(.clashDisplayBodyTemp())
                                         .foregroundColor(.secondary)
                                     
                                     Text(restaurant.address)
@@ -158,7 +223,7 @@ struct RestaurantDetailView: View {
                                     }) {
                                         HStack {
                                             Image(systemName: "folder.badge.plus")
-                                                .font(.system(size: 18, weight: .medium))
+                                                .font(.clashDisplayBodyTemp(size: 18))
                                             
                                             Text("Add to Collection")
                                                 .font(.poppinsAccentTemp(size: 18))
@@ -171,54 +236,71 @@ struct RestaurantDetailView: View {
                                     }
                                     .padding(.horizontal, 20)
                                     
-                                    // Three action buttons in a row
-                                    HStack(spacing: 12) {
+                                    // Four action buttons in new order: View Original Post, Directions, Site, Share
+                                    HStack(spacing: 8) {
+                                        Button(action: {
+                                            // TODO: Open original social media post
+                                            HapticManager.shared.light()
+                                        }) {
+                                            VStack(spacing: 6) {
+                                                Image(systemName: getSocialMediaIcon())
+                                                    .font(.clashDisplayBodyTemp(size: 18))
+                                                Text("View Post")
+                                                    .font(.clashDisplayCaptionTemp(size: 11))
+                                            }
+                                            .foregroundColor(.primary)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 12)
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(12)
+                                        }
+                                        
                                         Button(action: {
                                             HapticManager.shared.light()
                                         }) {
-                                            VStack(spacing: 8) {
+                                            VStack(spacing: 6) {
+                                                Image(systemName: "location.fill")
+                                                    .font(.clashDisplayBodyTemp(size: 18))
+                                                Text("Directions")
+                                                    .font(.clashDisplayCaptionTemp(size: 11))
+                                            }
+                                            .foregroundColor(.primary)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 12)
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(12)
+                                        }
+                                        
+                                        Button(action: {
+                                            HapticManager.shared.light()
+                                        }) {
+                                            VStack(spacing: 6) {
+                                                Image(systemName: "globe")
+                                                    .font(.clashDisplayBodyTemp(size: 18))
+                                                Text("Site")
+                                                    .font(.clashDisplayCaptionTemp(size: 11))
+                                            }
+                                            .foregroundColor(.primary)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 12)
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(12)
+                                        }
+                                        
+                                        Button(action: {
+                                            HapticManager.shared.light()
+                                        }) {
+                                            VStack(spacing: 6) {
                                                 Image(systemName: "square.and.arrow.up")
-                                                    .font(.system(size: 20))
+                                                    .font(.clashDisplayBodyTemp(size: 18))
                                                 Text("Share")
-                                                    .font(.system(size: 14, weight: .medium))
+                                                    .font(.clashDisplayCaptionTemp(size: 11))
                                             }
                                             .foregroundColor(.primary)
                                             .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 16)
+                                            .padding(.vertical, 12)
                                             .background(Color(.systemGray6))
-                                            .cornerRadius(16)
-                                        }
-                                        
-                                        Button(action: {
-                                            HapticManager.shared.light()
-                                        }) {
-                                            VStack(spacing: 8) {
-                                                Image(systemName: "calendar.badge.plus")
-                                                    .font(.system(size: 20))
-                                                Text("Book")
-                                                    .font(.system(size: 14, weight: .medium))
-                                            }
-                                            .foregroundColor(.primary)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 16)
-                                            .background(Color(.systemGray6))
-                                            .cornerRadius(16)
-                                        }
-                                        
-                                        Button(action: {
-                                            HapticManager.shared.light()
-                                        }) {
-                                            VStack(spacing: 8) {
-                                                Image(systemName: "map.fill")
-                                                    .font(.system(size: 20))
-                                                Text("Map")
-                                                    .font(.system(size: 14, weight: .medium))
-                                            }
-                                            .foregroundColor(.primary)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 16)
-                                            .background(Color(.systemGray6))
-                                            .cornerRadius(16)
+                                            .cornerRadius(12)
                                         }
                                     }
                                     .padding(.horizontal, 20)
@@ -236,6 +318,18 @@ struct RestaurantDetailView: View {
         .sheet(isPresented: $showingCollectionPicker) {
             CollectionPickerView(restaurant: restaurant)
                 .environmentObject(store)
+        }
+    }
+    
+    // Helper function to get social media icon based on source
+    private func getSocialMediaIcon() -> String {
+        switch restaurant.source {
+        case .instagram:
+            return "camera.fill"
+        case .tiktok:
+            return "music.note"
+        case .web:
+            return "globe"
         }
     }
 }
@@ -258,7 +352,7 @@ struct CollectionPickerView: View {
                         
                         VStack(spacing: 16) {
                             Text("Try creating a new Collection")
-                                .font(.system(size: 18, weight: .medium))
+                                .font(.clashDisplayBodyTemp(size: 18))
                                 .foregroundColor(.primary)
                                 .multilineTextAlignment(.center)
                             
@@ -267,7 +361,7 @@ struct CollectionPickerView: View {
                                 showingNewCollection = true
                             }) {
                                 Text("Add Collection")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.clashDisplayButtonTemp())
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 50)
@@ -307,7 +401,7 @@ struct CollectionPickerView: View {
                     showingNewCollection = true
                 }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.clashDisplayButtonTemp(size: 18))
                 }
             )
         }
@@ -339,7 +433,7 @@ struct CollectionRow: View {
                     .frame(width: 60, height: 60)
                     .overlay(
                         Text(collection.name.prefix(1).uppercased())
-                            .font(.system(size: 24, weight: .bold))
+                            .font(.clashDisplayCardTitleTemp())
                             .foregroundColor(.white)
                     )
                 
@@ -349,14 +443,14 @@ struct CollectionRow: View {
                         .foregroundColor(.primary)
                     
                     Text("\(collection.restaurantIds.count) spots")
-                        .font(.system(size: 14))
+                        .font(.clashDisplaySecondaryTemp())
                         .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14))
+                    .font(.clashDisplaySecondaryTemp())
                     .foregroundColor(.secondary)
             }
             .padding(.horizontal, 16)
@@ -375,21 +469,55 @@ struct NewCollectionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var collectionName = ""
     @State private var selectedGradient = 0
+    @State private var isAnimating = false
+    
+    // Cover customization options
+    @State private var coverMode: CoverMode = .image // .gradient or .image
+    @State private var selectedEmoji = "📍"
+    @State private var selectedImage: UIImage?
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    
+    enum CoverMode {
+        case gradient, image
+    }
+    
+    let isTogetherCollection: Bool
+    let onCollectionCreated: ((String) -> Void)?
+    
+    init(isTogetherCollection: Bool = false, onCollectionCreated: ((String) -> Void)? = nil) {
+        self.isTogetherCollection = isTogetherCollection
+        self.onCollectionCreated = onCollectionCreated
+    }
     
     private let gradientOptions: [[Color]] = [
-        [.purple.opacity(0.8), .pink.opacity(0.8)],
-        [.blue.opacity(0.8), .cyan.opacity(0.8)],
-        [.orange.opacity(0.8), .yellow.opacity(0.8)],
-        [.green.opacity(0.8), .mint.opacity(0.8)],
-        [.red.opacity(0.8), .pink.opacity(0.8)]
+        [Color.reelEatsAccent.opacity(0.9), Color.reelEatsAccent.opacity(0.6)],
+        [.purple.opacity(0.9), .pink.opacity(0.7)],
+        [.blue.opacity(0.9), .cyan.opacity(0.7)],
+        [.orange.opacity(0.9), .yellow.opacity(0.7)],
+        [.green.opacity(0.9), .mint.opacity(0.7)],
+        [.red.opacity(0.9), .pink.opacity(0.7)]
     ]
     
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                // Collection preview
-                VStack(spacing: 20) {
-                    RoundedRectangle(cornerRadius: 20)
+    var headerSection: some View {
+        VStack(spacing: 24) {
+            Text(isTogetherCollection ? "Create a Together Collection" : "Create a Personal Collection")
+                .font(.newYorkHeader(size: 22))
+                .foregroundColor(.primary)
+                .opacity(isAnimating ? 1.0 : 0.0)
+                .offset(y: isAnimating ? 0 : -20)
+                .animation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.2), value: isAnimating)
+            
+            previewSection
+        }
+        .padding(.top, 20)
+    }
+    
+    var previewSection: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                if coverMode == .gradient {
+                    // Gradient background
+                    RoundedRectangle(cornerRadius: 24)
                         .fill(
                             LinearGradient(
                                 colors: gradientOptions[selectedGradient],
@@ -397,90 +525,388 @@ struct NewCollectionView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 120, height: 120)
+                        .frame(width: 140, height: 140)
+                        .shadow(color: gradientOptions[selectedGradient][0].opacity(0.3), radius: 20, x: 0, y: 10)
+                } else {
+                    // Image background
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 140, height: 140)
                         .overlay(
-                            Text(collectionName.isEmpty ? "?" : collectionName.prefix(1).uppercased())
-                                .font(.system(size: 40, weight: .bold))
-                                .foregroundColor(.white)
-                        )
-                    
-                    Text(collectionName.isEmpty ? "New Collection" : collectionName)
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-                .padding(.top, 40)
-                
-                // Collection name input
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Collection Name")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                    
-                    TextField("Enter name", text: $collectionName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                }
-                .padding(.horizontal, 20)
-                
-                // Gradient picker
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Cover Style")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 20)
-                    
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(0..<gradientOptions.count, id: \.self) { index in
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: gradientOptions[index],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 50, height: 50)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.black, lineWidth: selectedGradient == index ? 3 : 0)
-                                    )
-                                    .onTapGesture {
-                                        selectedGradient = index
+                            Group {
+                                if let selectedImage = selectedImage {
+                                    Image(uiImage: selectedImage)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 140, height: 140)
+                                        .clipped()
+                                        .cornerRadius(24)
+                                } else {
+                                    VStack(spacing: 8) {
+                                        Image(systemName: "photo")
+                                            .font(.newYorkLogo(size: 32))
+                                            .foregroundColor(.secondary)
+                                        Text("Add Photo")
+                                            .font(.newYorkCaption())
+                                            .foregroundColor(.secondary)
                                     }
+                                }
                             }
+                        )
+                        .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 10)
+                }
+                
+                // Content overlay
+                if coverMode == .gradient {
+                    if isTogetherCollection {
+                        VStack(spacing: 4) {
+                            Image(systemName: "person.2.fill")
+                                .font(.newYorkLogo(size: 20))
+                                .foregroundColor(.white)
+                            
+                            Text(selectedEmoji)
+                                .font(.system(size: 36))
                         }
-                        .padding(.horizontal, 20)
+                        .opacity(isAnimating ? 1.0 : 0.0)
+                        .scaleEffect(isAnimating ? 1.0 : 0.5)
+                        .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.6), value: isAnimating)
+                    } else {
+                        Text(selectedEmoji)
+                            .font(.system(size: 48))
+                            .opacity(isAnimating ? 1.0 : 0.0)
+                            .scaleEffect(isAnimating ? 1.0 : 0.5)
+                            .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.6), value: isAnimating)
                     }
                 }
+            }
+            .scaleEffect(isAnimating ? 1.0 : 0.8)
+            .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.4), value: isAnimating)
+            
+            Text(collectionName.isEmpty ? (isTogetherCollection ? "Together Collection" : "My Collection") : collectionName)
+                .font(.newYorkCardTitle(size: 20))
+                .foregroundColor(.primary)
+                .opacity(isAnimating ? 1.0 : 0.0)
+                .offset(y: isAnimating ? 0 : 10)
+                .animation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.8), value: isAnimating)
+        }
+    }
+    
+    var inputSection: some View {
+        VStack(spacing: 24) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Collection Name")
+                    .font(.newYorkButton())
+                    .foregroundColor(.secondary)
                 
-                Spacer()
+                TextField("Enter collection name", text: $collectionName)
+                    .font(.newYorkRestaurantName())
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(16)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(collectionName.isEmpty ? Color.clear : Color.reelEatsAccent, lineWidth: 2)
+                    )
+            }
+            .padding(.horizontal, 24)
+            
+            coverCustomizationSection
+        }
+    }
+    
+    var coverCustomizationSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Cover Design")
+                .font(.newYorkButton())
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 24)
+            
+            // Cover mode selector
+            HStack(spacing: 16) {
+                coverModeButton(mode: .gradient, title: "Gradient + Emoji", icon: "paintpalette.fill")
+                coverModeButton(mode: .image, title: "Upload Photo", icon: "photo.fill")
+            }
+            .padding(.horizontal, 24)
+            
+            if coverMode == .gradient {
+                gradientAndEmojiSection
+            } else {
+                imageUploadSection
+            }
+        }
+    }
+    
+    func coverModeButton(mode: CoverMode, title: String, icon: String) -> some View {
+        Button(action: {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                coverMode = mode
+            }
+            HapticManager.shared.light()
+        }) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(coverMode == mode ? Color.reelEatsAccent : Color(.systemGray5))
+                        .frame(width: 50, height: 50)
+                    
+                    Image(systemName: icon)
+                        .font(.newYorkButton(size: 20))
+                        .foregroundColor(coverMode == mode ? .white : .secondary)
+                }
                 
-                // Create button
-                Button(action: {
-                    if !collectionName.isEmpty {
-                        store.createCollection(name: collectionName)
+                Text(title)
+                    .font(.newYorkCaption())
+                    .foregroundColor(coverMode == mode ? .primary : .secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    var gradientAndEmojiSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Gradient picker
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Background Color")
+                    .font(.newYorkCaption())
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 24)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(0..<gradientOptions.count, id: \.self) { index in
+                            gradientButton(for: index)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+            }
+            
+            // Emoji picker
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Icon Emoji")
+                    .font(.newYorkCaption())
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 24)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(emojiOptions, id: \.self) { emoji in
+                            emojiButton(emoji: emoji)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+            }
+        }
+    }
+    
+    var imageUploadSection: some View {
+        VStack(spacing: 16) {
+            PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                VStack(spacing: 12) {
+                    if let selectedImage = selectedImage {
+                        Image(uiImage: selectedImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 80, height: 80)
+                            .clipped()
+                            .cornerRadius(12)
+                    } else {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.newYorkButton(size: 32))
+                            .foregroundColor(.reelEatsAccent)
+                    }
+                    
+                    Text(selectedImage != nil ? "Change Photo" : "Choose from Gallery")
+                        .font(.newYorkButton())
+                        .foregroundColor(.reelEatsAccent)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+                .background(Color(.systemGray6))
+                .cornerRadius(16)
+            }
+            .padding(.horizontal, 24)
+        }
+    }
+    
+    private let emojiOptions = ["📍", "🍽️", "✨", "😍", "🎉", "❤️", "🔥", "🎆", "🌈", "🌎", "🎁", "💥", "🍕", "☕", "🍔", "🍜", "🍝", "🍺", "🍸", "🍰", "🍭", "🥙", "🍳", "🍴"]
+    
+    func emojiButton(emoji: String) -> some View {
+        Button(action: {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedEmoji = emoji
+            }
+            HapticManager.shared.light()
+        }) {
+            Text(emoji)
+                .font(.system(size: 28))
+                .frame(width: 45, height: 45)
+                .background(
+                    Circle()
+                        .fill(selectedEmoji == emoji ? Color.reelEatsAccent.opacity(0.2) : Color.clear)
+                )
+                .overlay(
+                    Circle()
+                        .stroke(selectedEmoji == emoji ? Color.reelEatsAccent : Color.clear, lineWidth: 2)
+                )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    func gradientButton(for index: Int) -> some View {
+        Button(action: {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                selectedGradient = index
+            }
+            HapticManager.shared.light()
+        }) {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: gradientOptions[index],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 45, height: 45)
+                .overlay(
+                    Circle()
+                        .stroke(
+                            selectedGradient == index ? Color.primary : Color.clear, 
+                            lineWidth: 2
+                        )
+                )
+                .shadow(
+                    color: gradientOptions[index][0].opacity(0.4), 
+                    radius: selectedGradient == index ? 6 : 3, 
+                    x: 0, 
+                    y: selectedGradient == index ? 3 : 1
+                )
+                .scaleEffect(selectedGradient == index ? 1.05 : 1.0)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: selectedGradient == index)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    var actionSection: some View {
+        VStack(spacing: 16) {
+            Button(action: {
+                if !collectionName.isEmpty {
+                    HapticManager.shared.success()
+                    store.createCollection(name: collectionName)
+                    
+                    if let onCollectionCreated = onCollectionCreated {
+                        onCollectionCreated(collectionName)
+                    } else {
                         dismiss()
                     }
-                }) {
+                }
+            }) {
+                HStack {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.newYorkButton(size: 18))
+                    
                     Text("Create Collection")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(collectionName.isEmpty ? Color.gray : Color.black)
-                        .cornerRadius(25)
+                        .font(.newYorkButton(size: 18))
                 }
-                .disabled(collectionName.isEmpty)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
+                .background(createButtonBackground)
+                .cornerRadius(16)
+                .shadow(
+                    color: collectionName.isEmpty ? Color.clear : Color.reelEatsAccent.opacity(0.3), 
+                    radius: 8, 
+                    x: 0, 
+                    y: 4
+                )
             }
-            .navigationTitle("New Collection")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(
-                leading: Button("Cancel") {
-                    dismiss()
+            .disabled(collectionName.isEmpty)
+            .scaleEffect(collectionName.isEmpty ? 0.95 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: collectionName.isEmpty)
+            .padding(.horizontal, 24)
+            
+            if collectionName.isEmpty {
+                Text("Enter a name to create your collection")
+                    .font(.newYorkCaption())
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.top, 16)
+    }
+    
+    var createButtonBackground: some ShapeStyle {
+        if collectionName.isEmpty {
+            return AnyShapeStyle(Color.gray.opacity(0.5))
+        } else {
+            return AnyShapeStyle(LinearGradient(
+                colors: [Color.reelEatsAccent, Color.reelEatsAccent.opacity(0.8)],
+                startPoint: .leading,
+                endPoint: .trailing
+            ))
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 32) {
+                    headerSection
+                    inputSection
+                    actionSection
                 }
-            )
+                .padding(.bottom, 32)
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        HapticManager.shared.light()
+                        dismiss()
+                    }
+                    .font(.newYorkButton())
+                    .foregroundColor(.secondary)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        if !collectionName.isEmpty {
+                            HapticManager.shared.success()
+                            store.createCollection(name: collectionName)
+                            
+                            if let onCollectionCreated = onCollectionCreated {
+                                onCollectionCreated(collectionName)
+                            } else {
+                                dismiss()
+                            }
+                        }
+                    }
+                    .font(.newYorkButton())
+                    .foregroundColor(collectionName.isEmpty ? .secondary : .reelEatsAccent)
+                    .disabled(collectionName.isEmpty)
+                }
+            }
+        }
+        .onChange(of: selectedPhotoItem) { newItem in
+            Task {
+                if let newItem = newItem {
+                    if let data = try? await newItem.loadTransferable(type: Data.self) {
+                        if let uiImage = UIImage(data: data) {
+                            selectedImage = uiImage
+                        }
+                    }
+                }
+            }
+        }
+        .onAppear {
+            withAnimation {
+                isAnimating = true
+            }
         }
     }
 }
@@ -501,15 +927,7 @@ struct RestaurantMiniMap: View {
     
     var body: some View {
         Map(coordinateRegion: .constant(region), annotationItems: [restaurant]) { restaurant in
-            MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: restaurant.latitude, longitude: restaurant.longitude)) {
-                Circle()
-                    .fill(restaurant.category.color)
-                    .frame(width: 12, height: 12)
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white, lineWidth: 2)
-                    )
-            }
+            MapPin(coordinate: CLLocationCoordinate2D(latitude: restaurant.latitude, longitude: restaurant.longitude))
         }
     }
 }
@@ -528,7 +946,7 @@ struct InsightsView: View {
                     dismiss()
                 }) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 20, weight: .medium))
+                        .font(.clashDisplayRestaurantNameTemp(size: 20))
                         .foregroundColor(.primary)
                 }
                 
@@ -562,7 +980,7 @@ struct InsightsView: View {
                         // Text overlay
                         VStack(alignment: .leading, spacing: 8) {
                             Text(restaurant.name.uppercased())
-                                .font(.system(size: 32, weight: .black))
+                                .font(.clashDisplayHeaderTemp(size: 32))
                                 .foregroundColor(.white)
                             
                             Text(restaurant.description)
@@ -579,9 +997,9 @@ struct InsightsView: View {
                     HStack {
                         HStack(spacing: 4) {
                             Image(systemName: restaurant.category.icon)
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.clashDisplaySecondaryTemp())
                             Text(restaurant.tags.first ?? restaurant.category.rawValue)
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.clashDisplaySecondaryTemp())
                         }
                         .foregroundColor(.white)
                         .padding(.horizontal, 16)
@@ -596,13 +1014,13 @@ struct InsightsView: View {
                     // Source info
                     HStack(spacing: 16) {
                         Image(systemName: restaurant.source.icon)
-                            .font(.system(size: 18))
+                            .font(.clashDisplayBodyTemp(size: 18))
                             .foregroundColor(.secondary)
                         
                         Spacer()
                         
                         Text(restaurant.source.displayName)
-                            .font(.system(size: 14))
+                            .font(.clashDisplaySecondaryTemp())
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 4)
@@ -642,14 +1060,14 @@ struct InsightsView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         HStack {
                             Image(systemName: restaurant.category.icon)
-                                .font(.system(size: 24))
+                                .font(.clashDisplayHeaderTemp())
                                 .foregroundColor(restaurant.category.color)
                             
                             Spacer()
                             
                             Button(action: {}) {
                                 Image(systemName: "ellipsis")
-                                    .font(.system(size: 20))
+                                    .font(.clashDisplayRestaurantNameTemp(size: 20))
                                     .foregroundColor(.secondary)
                             }
                         }
@@ -672,7 +1090,7 @@ struct InsightsView: View {
                         
                         Button(action: {}) {
                             Text("View on map")
-                                .font(.system(size: 18, weight: .semibold))
+                                .font(.clashDisplayButtonTemp(size: 18))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 16)
@@ -685,7 +1103,7 @@ struct InsightsView: View {
                     // Recently Saved section
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Recently Saved")
-                            .font(.system(size: 20, weight: .bold))
+                            .font(.clashDisplayCardTitleTemp(size: 20))
                             .padding(.horizontal, 20)
                         
                         // Add some placeholder for recently saved items
@@ -710,16 +1128,39 @@ struct InsightRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
             Text(emoji)
-                .font(.system(size: 28))
+                .font(.clashDisplayHeaderTemp(size: 28))
             
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.clashDisplayCardTitleTemp(size: 18))
                 
                 Text(description)
-                    .font(.system(size: 16))
+                    .font(.clashDisplayBodyTemp())
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+// MARK: - Star Rating View
+
+struct StarRatingView: View {
+    @Binding var rating: Double
+    private let maxRating = 5
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(1...maxRating, id: \.self) { index in
+                Button(action: {
+                    HapticManager.shared.light()
+                    rating = Double(index)
+                }) {
+                    Image(systemName: index <= Int(rating) ? "star.fill" : "star")
+                        .font(.clashDisplayHeaderTemp(size: 24))
+                        .foregroundColor(index <= Int(rating) ? .yellow : .gray.opacity(0.3))
+                        .animation(.easeInOut(duration: 0.1), value: rating)
+                }
             }
         }
     }

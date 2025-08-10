@@ -29,12 +29,44 @@
 		C023A5CA2E3C638900A80CA4 /* ReelEatsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReelEatsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		C023A5B52E3C638700A80CA4 /* ReelEats */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = ReelEats;
-			sourceTree = "<group>";
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C023A64D2E42D1D200A80CA4 /* Exceptions for "ReelEats" folder in "ReelEats" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AddSpotView.swift,
+				Assets.xcassets,
+				CompleteOnboarding.swift,
+				ContentView.swift,
+				FontExtensions.swift,
+				HapticManager.swift,
+				MainAppViews.swift,
+				PostOnboardingTutorial.swift,
+				ReelEatsApp.swift,
+				RestaurantDetailView.swift,
+				ScanCollectionView.swift,
+			);
+			target = C023A5B22E3C638700A80CA4 /* ReelEats */;
 		};
+		C023A64E2E42D1D200A80CA4 /* Exceptions for "ReelEats" folder in "ReelEatsUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AddSpotView.swift,
+				Assets.xcassets,
+				CompleteOnboarding.swift,
+				ContentView.swift,
+				FontExtensions.swift,
+				HapticManager.swift,
+				MainAppViews.swift,
+				PostOnboardingTutorial.swift,
+				ReelEatsApp.swift,
+				RestaurantDetailView.swift,
+				ScanCollectionView.swift,
+			);
+			target = C023A5C92E3C638900A80CA4 /* ReelEatsUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
 		C023A5C32E3C638900A80CA4 /* ReelEatsTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ReelEatsTests;
@@ -43,6 +75,15 @@
 		C023A5CD2E3C638900A80CA4 /* ReelEatsUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ReelEatsUITests;
+			sourceTree = "<group>";
+		};
+		C023A6412E42D1D200A80CA4 /* ReelEats */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C023A64D2E42D1D200A80CA4 /* Exceptions for "ReelEats" folder in "ReelEats" target */,
+				C023A64E2E42D1D200A80CA4 /* Exceptions for "ReelEats" folder in "ReelEatsUITests" target */,
+			);
+			path = ReelEats;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,7 +116,7 @@
 		C023A5AA2E3C638700A80CA4 = {
 			isa = PBXGroup;
 			children = (
-				C023A5B52E3C638700A80CA4 /* ReelEats */,
+				C023A6412E42D1D200A80CA4 /* ReelEats */,
 				C023A5C32E3C638900A80CA4 /* ReelEatsTests */,
 				C023A5CD2E3C638900A80CA4 /* ReelEatsUITests */,
 				C023A5B42E3C638700A80CA4 /* Products */,
@@ -106,9 +147,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				C023A5B52E3C638700A80CA4 /* ReelEats */,
 			);
 			name = ReelEats;
 			packageProductDependencies = (
@@ -155,6 +193,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				C023A5CD2E3C638900A80CA4 /* ReelEatsUITests */,
+				C023A6412E42D1D200A80CA4 /* ReelEats */,
 			);
 			name = ReelEatsUITests;
 			packageProductDependencies = (
@@ -400,6 +439,7 @@
 				DEVELOPMENT_TEAM = 5QDMMUHPB5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReelEats/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -431,6 +471,7 @@
 				DEVELOPMENT_TEAM = 5QDMMUHPB5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReelEats/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

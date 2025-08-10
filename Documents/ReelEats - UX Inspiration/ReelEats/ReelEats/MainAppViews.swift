@@ -32,7 +32,7 @@ struct HomeTabView: View {
     @EnvironmentObject var store: RestaurantStore
     @StateObject private var filterState = FilterState()
     @State private var selectedContentType: ContentType = .spots
-    @State private var showingListView = true // true for List, false for Map
+    // All Spots always shows list view, Collections always shows grid view
     @State private var selectedCategory: RestaurantCategory? = .all
     @State private var selectedCollection: Collection?
     @State private var showingProfile = false
@@ -45,44 +45,57 @@ struct HomeTabView: View {
     @State private var showingPriceDropdown = false
     @State private var showingCollectionsDropdown = false
     @State private var selectedRestaurantForDetail: Restaurant?
-    @State private var showingGridView = false // For All Spots grid/list toggle
     @State private var showingByMeDropdown = false
     @State private var showingByOthersDropdown = false
-    @State private var myListsSortOrder: MyListsSortOrder = .recentlyCreated
-    @State private var showingMyListsSortOptions = false
+    @State private var collectionsSortOrder: SortOrder = .recentlyAdded
+    @State private var showingCollectionsSortOptions = false
     @State private var collectionFilter: CollectionFilterType = .byMe
     
     enum ContentType: String, CaseIterable {
         case spots = "All Spots"
-        case collections = "My Lists"
+        case collections = "Collections"
     }
     
     enum SortOrder: String, CaseIterable {
         case recentlyAdded = "Recently added"
+        case recentlyViewed = "Recently viewed"
         case alphabetical = "Alphabetical"
-        case rating = "Rating"
-        case distance = "Distance"
         
         var icon: String {
             switch self {
             case .recentlyAdded: return "clock"
+            case .recentlyViewed: return "eye"
             case .alphabetical: return "textformat"
-            case .rating: return "star"
-            case .distance: return "location"
+            }
+        }
+        
+        var shortName: String {
+            switch self {
+            case .recentlyAdded: return "Recent"
+            case .recentlyViewed: return "Viewed"
+            case .alphabetical: return "A-Z"
             }
         }
     }
     
     enum MyListsSortOrder: String, CaseIterable {
-        case recentlyCreated = "Recently created"
+        case recentlyAdded = "Recently added"
+        case recentlyViewed = "Recently viewed"
         case alphabetical = "Alphabetical"
-        case creator = "Creator"
         
         var icon: String {
             switch self {
-            case .recentlyCreated: return "clock"
+            case .recentlyAdded: return "clock"
+            case .recentlyViewed: return "eye"
             case .alphabetical: return "textformat"
-            case .creator: return "person"
+            }
+        }
+        
+        var shortName: String {
+            switch self {
+            case .recentlyAdded: return "Recent"
+            case .recentlyViewed: return "Viewed"
+            case .alphabetical: return "A-Z"
             }
         }
     }
@@ -93,7 +106,6 @@ struct HomeTabView: View {
                 // Sticky header section - ReelEats logo, search, add button, and toggle
                 VStack(spacing: 0) {
                     SpotifyStyleHeader(
-                        showingSearch: $showingSearch,
                         showingAddMenu: $showingAddMenu,
                         showingProfile: $showingProfile
                     )
@@ -107,245 +119,16 @@ struct HomeTabView: View {
                 .background(Color(.systemBackground))
                 .zIndex(1000)
                 
-                // Scrollable content
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        
-                        if selectedContentType == .spots {
-                            // Filter pills (above sort/grid section) - no left padding for proper alignment
-                            FilterBar(
-                                showingCuisineDropdown: $showingCuisineDropdown,
-                                showingDistanceDropdown: $showingDistanceDropdown,
-                                showingPriceDropdown: $showingPriceDropdown,
-                                showingCollectionsDropdown: $showingCollectionsDropdown
-                            )
-                                .environmentObject(filterState)
-                                .padding(.top, 8)  // Reduced from 16
-                                .padding(.bottom, 8)  // Reduced from 12
-                            
-                            // Spotify-style sort and grid/list toggle
-                            SpotifySortAndGrid(
-                                sortOrder: $sortOrder,
-                                showingGridView: $showingGridView,
-                                showingSortOptions: $showingSortOptions
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 16)
-                            
-                            // Main content based on view toggle
-                            if showingListView {
-                                // Embedded list content (no separate ScrollView)
-                                SpotsListContent(
-                                    selectedCategory: $selectedCategory,
-                                    sortOrder: sortOrder,
-                                    isGridView: showingGridView,
-                                    onRestaurantSelect: { restaurant in
-                                        selectedRestaurantForDetail = restaurant
-                                    }
-                                )
-                                .environmentObject(store)
-                            } else {
-                                // Map view placeholder (maps typically need their own container)
-                                VStack {
-                                    Text("Map view - click a restaurant card to see it on map")
-                                        .foregroundColor(.secondary)
-                                        .padding()
-                                    
-                                    // Show restaurant cards that when tapped will switch to map
-                                    SpotsListContent(
-                                        selectedCategory: $selectedCategory,
-                                        sortOrder: sortOrder,
-                                        isGridView: showingGridView,
-                                        onRestaurantSelect: { restaurant in
-                                            selectedRestaurantForDetail = restaurant
-                                        }
-                                    )
-                                    .environmentObject(store)
-                                }
-                            }
-                        } else {
-                            // My Lists filters and sort
-                            MyListsFilterBar(
-                                showingByMeDropdown: $showingByMeDropdown,
-                                showingByOthersDropdown: $showingByOthersDropdown,
-                                collectionFilter: $collectionFilter
-                            )
-                            .environmentObject(filterState)
-                            .padding(.top, 8)
-                            .padding(.bottom, 8)
-                            
-                            // My Lists sort and grid/list toggle
-                            MyListsSortAndGrid(
-                                sortOrder: $myListsSortOrder,
-                                showingListView: $showingListView,
-                                showingSortOptions: $showingMyListsSortOptions
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 16)
-                            
-                            // Collections content (now embedded in main scroll)
-                            CollectionsEmbeddedContent(
-                                selectedCollection: $selectedCollection,
-                                onRestaurantSelect: { restaurant in
-                                    selectedRestaurant = restaurant
-                                    showingListView = false // Switch to map view
-                                },
-                                isListView: showingListView,
-                                collectionFilter: collectionFilter
-                            )
-                            .environmentObject(store)
-                        }
-                        
-                        // Bottom safe area padding
-                        Color.clear
-                            .frame(height: 100)
-                    }
-                }
+                // Scrollable content - simplified
+                mainScrollContent
             }
         }
         .navigationBarHidden(true)
         .overlay(
             // UberEats-style bottom sheet overlay
             Group {
-                if showingSortOptions {
-                    UberEatsBottomSheetOverlay(
-                        isPresented: $showingSortOptions,
-                        title: "Sort by"
-                    ) {
-                        VStack(spacing: 0) {
-                            ForEach(HomeTabView.SortOrder.allCases, id: \.self) { option in
-                                FilterOptionItem(
-                                    title: option.rawValue,
-                                    isSelected: sortOrder == option,
-                                    action: {
-                                        HapticManager.shared.selection()
-                                        sortOrder = option
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            showingSortOptions = false
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                        .padding(.bottom, 32)
-                    }
-                }
                 
-                // Filter dropdowns as overlays
-                if showingCuisineDropdown {
-                    UberEatsBottomSheetOverlay(
-                        isPresented: $showingCuisineDropdown,
-                        title: "Cuisine"
-                    ) {
-                        GoogleStyleCuisineGrid(
-                            cuisineOptions: filterState.cuisineFilter.options,
-                            selectedOptions: filterState.cuisineFilter.selectedOptions
-                        ) { option in
-                            HapticManager.shared.light()
-                            if filterState.cuisineFilter.selectedOptions.contains(option) {
-                                filterState.cuisineFilter.selectedOptions.remove(option)
-                            } else {
-                                filterState.cuisineFilter.selectedOptions.insert(option)
-                            }
-                        }
-                    }
-                }
                 
-                if showingDistanceDropdown {
-                    UberEatsBottomSheetOverlay(
-                        isPresented: $showingDistanceDropdown,
-                        title: "Distance"
-                    ) {
-                        VStack(spacing: 0) {
-                            ForEach(filterState.distanceFilter.options, id: \.self) { option in
-                                FilterOptionItem(
-                                    title: option,
-                                    isSelected: filterState.distanceFilter.selectedOptions.contains(option)
-                                ) {
-                                    HapticManager.shared.light()
-                                    filterState.distanceFilter.selectedOptions = Set([option])
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        showingDistanceDropdown = false
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.bottom, 20)
-                    }
-                }
-                
-                if showingPriceDropdown {
-                    UberEatsBottomSheetOverlay(
-                        isPresented: $showingPriceDropdown,
-                        title: "Price Range"
-                    ) {
-                        VStack(spacing: 0) {
-                            ForEach(filterState.priceFilter.options, id: \.self) { option in
-                                FilterOptionItem(
-                                    title: option,
-                                    isSelected: filterState.priceFilter.selectedOptions.contains(option)
-                                ) {
-                                    HapticManager.shared.light()
-                                    if filterState.priceFilter.selectedOptions.contains(option) {
-                                        filterState.priceFilter.selectedOptions.remove(option)
-                                    } else {
-                                        filterState.priceFilter.selectedOptions.insert(option)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.bottom, 20)
-                    }
-                }
-                
-                if showingCollectionsDropdown {
-                    UberEatsBottomSheetOverlay(
-                        isPresented: $showingCollectionsDropdown,
-                        title: "My Lists"
-                    ) {
-                        VStack(spacing: 0) {
-                            ForEach(filterState.collectionsFilter.options, id: \.self) { option in
-                                FilterOptionItem(
-                                    title: option,
-                                    isSelected: filterState.collectionsFilter.selectedOptions.contains(option)
-                                ) {
-                                    HapticManager.shared.light()
-                                    if filterState.collectionsFilter.selectedOptions.contains(option) {
-                                        filterState.collectionsFilter.selectedOptions.remove(option)
-                                    } else {
-                                        filterState.collectionsFilter.selectedOptions.insert(option)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.bottom, 20)
-                    }
-                }
-                
-                // My Lists sort options
-                if showingMyListsSortOptions {
-                    UberEatsBottomSheetOverlay(
-                        isPresented: $showingMyListsSortOptions,
-                        title: "Sort by"
-                    ) {
-                        VStack(spacing: 0) {
-                            ForEach(HomeTabView.MyListsSortOrder.allCases, id: \.self) { option in
-                                FilterOptionItem(
-                                    title: option.rawValue,
-                                    isSelected: myListsSortOrder == option,
-                                    action: {
-                                        HapticManager.shared.selection()
-                                        myListsSortOrder = option
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            showingMyListsSortOptions = false
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                        .padding(.bottom, 32)
-                    }
-                }
             }
         )
         .sheet(isPresented: $showingSearch) {
@@ -359,7 +142,6 @@ struct HomeTabView: View {
         .fullScreenCover(item: $selectedCollection) { collection in
             CollectionDetailView(collection: collection, onRestaurantSelect: { restaurant in
                 selectedRestaurant = restaurant
-                showingListView = false
                 selectedCollection = nil
             })
                 .environmentObject(store)
@@ -368,6 +150,158 @@ struct HomeTabView: View {
             ProfileTabView()
                 .environmentObject(store)
         }
+        .sheet(isPresented: $showingSortOptions) {
+            SortOptionsBottomSheet(sortOrder: $sortOrder)
+        }
+        .sheet(isPresented: $showingCollectionsSortOptions) {
+            SortOptionsBottomSheet(sortOrder: $collectionsSortOrder)
+        }
+    }
+    
+    // MARK: - Computed Properties to reduce body complexity
+    
+    private var mainScrollContent: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                if selectedContentType == .spots {
+                    spotsContent
+                } else {
+                    collectionsContent
+                }
+                
+                // Bottom safe area padding
+                Color.clear
+                    .frame(height: 100)
+            }
+        }
+    }
+    
+    private var spotsContent: some View {
+        VStack(spacing: 0) {
+            // Filter pills
+            FilterBar(
+                showingCuisineDropdown: $showingCuisineDropdown,
+                showingDistanceDropdown: $showingDistanceDropdown,
+                showingPriceDropdown: $showingPriceDropdown,
+                showingCollectionsDropdown: $showingCollectionsDropdown
+            )
+            .environmentObject(filterState)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
+            
+            // Sort and grid toggle
+            SpotifySortAndGrid(
+                sortOrder: $sortOrder,
+                showingSortOptions: $showingSortOptions,
+                showingSearch: $showingSearch
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+            
+            // Spots list content
+            SpotsListContent(
+                selectedCategory: $selectedCategory,
+                sortOrder: sortOrder,
+                onRestaurantSelect: { restaurant in
+                    selectedRestaurantForDetail = restaurant
+                }
+            )
+            .environmentObject(store)
+        }
+    }
+    
+    private var collectionsContent: some View {
+        VStack(spacing: 0) {
+            // Filter bar for collections
+            MyListsFilterBar(
+                showingByMeDropdown: $showingByMeDropdown,
+                showingByOthersDropdown: $showingByOthersDropdown,
+                collectionFilter: $collectionFilter
+            )
+            .environmentObject(filterState)
+            .padding(.top, 8)
+            .padding(.bottom, 8)
+            
+            // Collections sort
+            SpotifySortAndGrid(
+                sortOrder: $collectionsSortOrder,
+                showingSortOptions: $showingCollectionsSortOptions,
+                showingSearch: .constant(false)
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+            
+            // Collections embedded content
+            CollectionsEmbeddedContent(
+                selectedCollection: $selectedCollection,
+                onRestaurantSelect: { restaurant in
+                    selectedRestaurant = restaurant
+                },
+                isListView: false,
+                collectionFilter: collectionFilter
+            )
+            .environmentObject(store)
+        }
+    }
+}
+
+// MARK: - Sort Options Bottom Sheet
+
+struct SortOptionsBottomSheet: View {
+    @Binding var sortOrder: HomeTabView.SortOrder
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Handle
+            ConsistentDragHandle()
+            
+            // Header
+            Text("Sort By")
+                .font(.newYorkHeader(size: 20))
+                .foregroundColor(.primary)
+                .padding(.bottom, 20)
+            
+            // Sort options
+            VStack(spacing: 0) {
+                ForEach(HomeTabView.SortOrder.allCases, id: \.self) { option in
+                    Button(action: {
+                        HapticManager.shared.selection()
+                        sortOrder = option
+                        dismiss()
+                    }) {
+                        HStack(spacing: 12) {
+                            Text(option.rawValue)
+                                .font(.newYorkButton())
+                                .foregroundColor(sortOrder == option ? .reelEatsAccent : .primary)
+                            
+                            Spacer()
+                            
+                            if sortOrder == option {
+                                Image(systemName: "checkmark")
+                                    .font(.newYorkButton())
+                                    .foregroundColor(.reelEatsAccent)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    if option != HomeTabView.SortOrder.allCases.last {
+                        Rectangle()
+                            .fill(Color(.systemGray5))
+                            .frame(height: 1)
+                            .padding(.leading, 20)
+                    }
+                }
+            }
+            
+            Spacer(minLength: 20)
+        }
+        .background(Color(.systemBackground))
+        .presentationDetents([.height(250), .medium])
+        .presentationDragIndicator(.visible)
     }
 }
 
@@ -380,30 +314,40 @@ struct MyListsFilterBar: View {
     @EnvironmentObject var filterState: FilterState
     
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                // By Me filter
-                FilterPill(
-                    text: "By Me",
-                    isSelected: collectionFilter == .byMe,
-                    hasDropdown: false
-                ) {
-                    HapticManager.shared.light()
-                    collectionFilter = .byMe
-                }
-                
-                // By Others filter
-                FilterPill(
-                    text: "By Others",
-                    isSelected: collectionFilter == .byOthers,
-                    hasDropdown: false
-                ) {
-                    HapticManager.shared.light()
-                    collectionFilter = .byOthers
-                }
+        HStack(spacing: 12) {
+            // By Me filter
+            FilterPill(
+                text: "By Me",
+                isSelected: collectionFilter == .byMe,
+                hasDropdown: false
+            ) {
+                HapticManager.shared.light()
+                collectionFilter = .byMe
             }
-            .padding(.leading, 16)
+            
+            // By Us filter
+            FilterPill(
+                text: "By Us",
+                isSelected: collectionFilter == .byUs,
+                hasDropdown: false
+            ) {
+                HapticManager.shared.light()
+                collectionFilter = .byUs
+            }
+            
+            // By Others filter
+            FilterPill(
+                text: "By Others",
+                isSelected: collectionFilter == .byOthers,
+                hasDropdown: false
+            ) {
+                HapticManager.shared.light()
+                collectionFilter = .byOthers
+            }
+            
+            Spacer()
         }
+        .padding(.horizontal, 16)
     }
 }
 
@@ -419,19 +363,32 @@ struct MyListsSortAndGrid: View {
             // Sort button
             Button(action: {
                 HapticManager.shared.light()
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showingSortOptions = true
+                GlobalOverlayManager.shared.present(title: "Sort by") {
+                    VStack(spacing: 0) {
+                        ForEach(HomeTabView.MyListsSortOrder.allCases, id: \.self) { option in
+                            FilterOptionItem(
+                                title: option.rawValue,
+                                isSelected: sortOrder == option,
+                                action: {
+                                    HapticManager.shared.selection()
+                                    sortOrder = option
+                                    GlobalOverlayManager.shared.dismiss()
+                                }
+                            )
+                        }
+                    }
+                    .padding(.bottom, 32)
                 }
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: sortOrder.icon)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.clashDisplaySecondaryTemp())
                     
                     Text(sortOrder.rawValue)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.clashDisplaySecondaryTemp())
                     
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.clashDisplayCaptionTemp(size: 10))
                 }
                 .foregroundColor(.primary)
             }
@@ -447,7 +404,7 @@ struct MyListsSortAndGrid: View {
                 }
             }) {
                 Image(systemName: showingListView ? "square.grid.2x2" : "list.bullet")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.clashDisplayBodyTemp())
                     .foregroundColor(.primary)
                     .frame(width: 32, height: 32)
             }
@@ -458,7 +415,6 @@ struct MyListsSortAndGrid: View {
 // MARK: - Spotify Style Header
 
 struct SpotifyStyleHeader: View {
-    @Binding var showingSearch: Bool
     @Binding var showingAddMenu: Bool
     @Binding var showingProfile: Bool
     
@@ -467,34 +423,25 @@ struct SpotifyStyleHeader: View {
             // ReelEats title only
             Text("ReelEats")
                 .font(.poppinsLogoTemp(size: 22))
+                .fontWeight(.black)
                 .foregroundColor(.primary)
+                .shadow(color: .primary.opacity(0.1), radius: 0, x: 0.5, y: 0.5)
             
             Spacer()
             
-            // Search and Add buttons
-            HStack(spacing: 20) {
-                Button(action: {
-                    HapticManager.shared.light()
-                    showingSearch = true
-                }) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-                
-                Button(action: {
-                    HapticManager.shared.light()
-                    showingProfile = true
-                }) {
-                    Circle()
-                        .fill(Color.orange.opacity(0.2))
-                        .frame(width: 32, height: 32)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.orange)
-                        )
-                }
+            // Profile button only
+            Button(action: {
+                HapticManager.shared.light()
+                showingProfile = true
+            }) {
+                Circle()
+                    .fill(Color.reelEatsAccent.opacity(0.2))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .font(.clashDisplayBodyTemp())
+                            .foregroundColor(.reelEatsAccent)
+                    )
             }
         }
         .padding(.horizontal, 16)
@@ -521,7 +468,7 @@ struct SpotCollectionToggle: View {
                 }) {
                     VStack(spacing: 6) {
                         Text(contentType.rawValue)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.clashDisplayButtonTemp())
                             .foregroundColor(selectedContentType == contentType ? .primary : .secondary)
                         
                         // Underline indicator
@@ -558,15 +505,15 @@ struct SortDropdown: View {
             }) {
                 HStack(spacing: 8) {
                     Image(systemName: sortOrder.icon)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.clashDisplaySecondaryTemp())
                         .foregroundColor(.primary)
                     
                     Text(sortOrder.rawValue)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.clashDisplayBodyTemp())
                         .foregroundColor(.primary)
                     
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.clashDisplayCaptionTemp())
                         .foregroundColor(.secondary)
                         .rotationEffect(.degrees(showingOptions ? 180 : 0))
                 }
@@ -592,19 +539,19 @@ struct SortDropdown: View {
                         }) {
                             HStack(spacing: 12) {
                                 Image(systemName: option.icon)
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.clashDisplaySecondaryTemp())
                                     .foregroundColor(sortOrder == option ? .white : .primary)
                                     .frame(width: 16)
                                 
                                 Text(option.rawValue)
-                                    .font(.system(size: 15, weight: .medium))
+                                    .font(.clashDisplayBodyTemp(size: 15))
                                     .foregroundColor(sortOrder == option ? .white : .primary)
                                 
                                 Spacer()
                                 
                                 if sortOrder == option {
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 12, weight: .semibold))
+                                        .font(.clashDisplayCaptionTemp())
                                         .foregroundColor(.white)
                                 }
                             }
@@ -636,8 +583,10 @@ struct SortDropdown: View {
 
 struct SpotifySortAndGrid: View {
     @Binding var sortOrder: HomeTabView.SortOrder
-    @Binding var showingGridView: Bool
     @Binding var showingSortOptions: Bool
+    @Binding var showingSearch: Bool
+    @State private var showingInlineSearch = false
+    @State private var searchText = ""
     
     var body: some View {
         HStack(spacing: 12) {
@@ -650,11 +599,11 @@ struct SpotifySortAndGrid: View {
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.up.arrow.down")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.clashDisplaySecondaryTemp())
                         .foregroundColor(.primary)
                     
                     Text(sortOrder.shortName)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.clashDisplaySecondaryTemp())
                         .foregroundColor(.primary)
                 }
                 .padding(.horizontal, 8)
@@ -662,49 +611,258 @@ struct SpotifySortAndGrid: View {
             }
             .buttonStyle(PlainButtonStyle())
             
-            Spacer()
+            // Animated search bar
+            if showingInlineSearch {
+                TextField("Search places...", text: $searchText)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .font(.clashDisplaySecondaryTemp())
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .onSubmit {
+                        // TODO: Implement search functionality
+                    }
+            } else {
+                Spacer()
+            }
             
-            // Grid/List toggle (show opposite of current state)
+            // Search button/cancel button
             Button(action: {
                 HapticManager.shared.light()
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showingGridView.toggle()
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    if showingInlineSearch {
+                        showingInlineSearch = false
+                        searchText = ""
+                    } else {
+                        showingInlineSearch = true
+                    }
                 }
             }) {
-                Image(systemName: showingGridView ? "list.bullet" : "square.grid.2x2")
-                    .font(.system(size: 18, weight: .medium))
+                Image(systemName: showingInlineSearch ? "xmark" : "magnifyingglass")
+                    .font(.newYorkButton(size: 18))
                     .foregroundColor(.primary)
                     .frame(width: 32, height: 32)
             }
-            .buttonStyle(PlainButtonStyle())
         }
-        
     }
 }
 
-// MARK: - UberEats-style Bottom Sheet Overlay (doesn't move content)
+// MARK: - Add to Collection Modal
 
-struct UberEatsBottomSheetOverlay<Content: View>: View {
-    @Binding var isPresented: Bool
-    let title: String
-    let content: () -> Content
+struct AddToCollectionModal: View {
+    let restaurant: Restaurant
+    @EnvironmentObject var store: RestaurantStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedCollections: Set<UUID> = []
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Handle
+            ConsistentDragHandle()
+            
+            // Header
+            VStack(spacing: 16) {
+                Text("Add to Collection")
+                    .font(.newYorkHeader(size: 20))
+                    .foregroundColor(.primary)
+                
+                HStack(spacing: 12) {
+                    // Restaurant image/emoji
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(restaurant.category.color.opacity(0.2))
+                        .overlay(
+                            Text(restaurant.emoji)
+                                .font(.clashDisplayBodyTemp(size: 24))
+                        )
+                        .frame(width: 50, height: 50)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(restaurant.name)
+                            .font(.newYorkRestaurantName())
+                            .foregroundColor(.primary)
+                        
+                        Text(restaurant.category.rawValue)
+                            .font(.newYorkSecondary())
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+            }
+            .padding(.bottom, 20)
+            
+            // Collections list
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(store.collections) { collection in
+                        AddToCollectionRow(
+                            collection: collection,
+                            restaurant: restaurant,
+                            isSelected: selectedCollections.contains(collection.id),
+                            onTap: {
+                                HapticManager.shared.light()
+                                if selectedCollections.contains(collection.id) {
+                                    selectedCollections.remove(collection.id)
+                                } else {
+                                    selectedCollections.insert(collection.id)
+                                }
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            
+            // Save button
+            VStack {
+                Rectangle()
+                    .fill(Color(.systemGray5))
+                    .frame(height: 1)
+                
+                Button(action: {
+                    HapticManager.shared.medium()
+                    for collectionId in selectedCollections {
+                        if let collection = store.collections.first(where: { $0.id == collectionId }) {
+                            store.addRestaurantToCollection(restaurant: restaurant, collection: collection)
+                        }
+                    }
+                    dismiss()
+                }) {
+                    HStack {
+                        Text(selectedCollections.isEmpty ? "Select Collections" : "Save to \(selectedCollections.count) Collection\(selectedCollections.count == 1 ? "" : "s")")
+                            .font(.newYorkButton())
+                            .foregroundColor(selectedCollections.isEmpty ? .secondary : .white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(selectedCollections.isEmpty ? Color(.systemGray5) : Color.reelEatsAccent)
+                    )
+                }
+                .disabled(selectedCollections.isEmpty)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+        }
+        .background(Color(.systemBackground))
+        .presentationDetents([.height(500), .large])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+struct AddToCollectionRow: View {
+    let collection: Collection
+    let restaurant: Restaurant
+    let isSelected: Bool
+    let onTap: () -> Void
+    @EnvironmentObject var store: RestaurantStore
+    
+    private var isAlreadyInCollection: Bool {
+        collection.restaurantIds.contains(restaurant.id)
+    }
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                // Collection icon/image
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.reelEatsAccent.opacity(0.2))
+                    .overlay(
+                        Text(collection.name.prefix(1).uppercased())
+                            .font(.newYorkButton())
+                            .foregroundColor(.reelEatsAccent)
+                    )
+                    .frame(width: 40, height: 40)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(collection.name)
+                        .font(.newYorkButton())
+                        .foregroundColor(.primary)
+                    
+                    Text("\(collection.restaurantIds.count) spots")
+                        .font(.newYorkSecondary())
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                // Spotify-style circle selector
+                ZStack {
+                    Circle()
+                        .stroke(Color(.systemGray3), lineWidth: 2)
+                        .frame(width: 20, height: 20)
+                    
+                    if isSelected {
+                        Circle()
+                            .fill(Color.reelEatsAccent)
+                            .frame(width: 20, height: 20)
+                        
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.clear)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(false)
+    }
+}
+
+// MARK: - Global Overlay Manager for Window-Level Presentation
+
+class GlobalOverlayManager: ObservableObject {
+    static let shared = GlobalOverlayManager()
+    
+    @Published var isPresented: Bool = false
+    @Published var title: String = ""
+    @Published var content: AnyView = AnyView(EmptyView())
+    
+    private init() {}
+    
+    func present<Content: View>(title: String, @ViewBuilder content: @escaping () -> Content) {
+        self.title = title
+        self.content = AnyView(content())
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            self.isPresented = true
+        }
+    }
+    
+    func dismiss() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            self.isPresented = false
+        }
+    }
+}
+
+// MARK: - Window-Level Bottom Sheet Overlay
+
+struct WindowLevelBottomSheet: View {
+    @ObservedObject private var overlayManager = GlobalOverlayManager.shared
     
     var body: some View {
         ZStack {
-            if isPresented {
-                // Background overlay - darkens the screen
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
+            if overlayManager.isPresented {
+                // Full screen overlay that covers everything including nav bars
+                Rectangle()
+                    .fill(Color.black.opacity(0.3))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea(.all)
                     .onTapGesture {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            isPresented = false
-                        }
+                        overlayManager.dismiss()
                     }
                 
-                // Bottom sheet with padding for bottom nav bar
-                VStack {
+                // Bottom sheet that truly starts from the absolute bottom
+                VStack(spacing: 0) {
                     Spacer()
                     
+                    // Content area with rounded top corners
                     VStack(spacing: 0) {
                         // Handle bar
                         RoundedRectangle(cornerRadius: 2.5)
@@ -713,21 +871,19 @@ struct UberEatsBottomSheetOverlay<Content: View>: View {
                             .padding(.top, 8)
                             .padding(.bottom, 12)
                         
-                        // Title
+                        // Title with close button
                         HStack {
-                            Text(title)
-                                .font(.system(size: 18, weight: .semibold))
+                            Text(overlayManager.title)
+                                .font(.clashDisplayButtonTemp(size: 18))
                                 .foregroundColor(.primary)
                             
                             Spacer()
                             
                             Button(action: {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    isPresented = false
-                                }
+                                overlayManager.dismiss()
                             }) {
                                 Image(systemName: "xmark")
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.clashDisplayBodyTemp())
                                     .foregroundColor(.secondary)
                                     .padding(8)
                                     .background(Color(.systemGray6))
@@ -737,31 +893,27 @@ struct UberEatsBottomSheetOverlay<Content: View>: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 20)
                         
-                        // Content
-                        content()
+                        // Dynamic content
+                        overlayManager.content
+                            .frame(maxWidth: .infinity)
                     }
                     .background(Color(.systemBackground))
                     .cornerRadius(16, corners: [.topLeft, .topRight])
                     .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: -4)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .padding(.bottom, 85) // Position just above bottom nav bar
+                    
+                    // Solid extension to cover bottom nav bar and safe area
+                    Rectangle()
+                        .fill(Color(.systemBackground))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .transition(.move(edge: .bottom))
+                .zIndex(10000) // Highest possible z-index
             }
         }
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isPresented)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: overlayManager.isPresented)
     }
 }
 
-extension HomeTabView.SortOrder {
-    var shortName: String {
-        switch self {
-        case .recentlyAdded: return "Recents"
-        case .alphabetical: return "A-Z"
-        case .rating: return "Rating"
-        case .distance: return "Distance"
-        }
-    }
-}
 
 // MARK: - My Lists Filter Bar
 
@@ -773,11 +925,25 @@ extension HomeTabView.SortOrder {
 
 struct ViewToggle: View {
     @Binding var showingListView: Bool
+    @Binding var showingSearch: Bool
     @Binding var sortOrder: HomeTabView.SortOrder
     @State private var showingSortMenu = false
     
     var body: some View {
         HStack(spacing: 16) {
+            // Search button
+            Button(action: {
+                HapticManager.shared.light()
+                showingSearch = true
+            }) {
+                Image(systemName: "magnifyingglass")
+                    .font(.newYorkButton(size: 18))
+                    .foregroundColor(.primary)
+                    .frame(width: 32, height: 32)
+            }
+            
+            Spacer()
+            
             // List/Map toggle buttons
             HStack(spacing: 8) {
                 Button(action: {
@@ -785,7 +951,7 @@ struct ViewToggle: View {
                     showingListView = true
                 }) {
                     Image(systemName: showingListView ? "list.bullet" : "list.bullet")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.clashDisplayBodyTemp())
                         .foregroundColor(showingListView ? .primary : .secondary)
                         .frame(width: 24, height: 24)
                 }
@@ -795,7 +961,7 @@ struct ViewToggle: View {
                     showingListView = false
                 }) {
                     Image(systemName: !showingListView ? "map.fill" : "map")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.clashDisplayBodyTemp())
                         .foregroundColor(!showingListView ? .primary : .secondary)
                         .frame(width: 24, height: 24)
                 }
@@ -809,9 +975,9 @@ struct ViewToggle: View {
                 }) {
                     HStack(spacing: 6) {
                         Image(systemName: sortOrder.icon)
-                            .font(.system(size: 14))
+                            .font(.clashDisplaySecondaryTemp())
                         Text("Recents")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.clashDisplaySecondaryTemp())
                     }
                     .foregroundColor(.secondary)
                 }
@@ -854,12 +1020,10 @@ struct SpotsListView: View {
         switch sortOrder {
         case .recentlyAdded:
             return restaurants // Assuming they're already in added order
+        case .recentlyViewed:
+            return restaurants // TODO: Sort by recently viewed (would need view tracking)
         case .alphabetical:
             return restaurants.sorted { $0.name < $1.name }
-        case .rating:
-            return restaurants.sorted { $0.rating > $1.rating }
-        case .distance:
-            return restaurants.sorted { ($0.latitude + $0.longitude) < ($1.latitude + $1.longitude) } // Simple distance approximation
         }
     }
     
@@ -893,7 +1057,6 @@ struct SpotsListView: View {
 struct SpotsListContent: View {
     @Binding var selectedCategory: RestaurantCategory?
     var sortOrder: HomeTabView.SortOrder
-    var isGridView: Bool = false
     let onRestaurantSelect: (Restaurant) -> Void
     @EnvironmentObject var store: RestaurantStore
     
@@ -907,46 +1070,26 @@ struct SpotsListContent: View {
         switch sortOrder {
         case .recentlyAdded:
             return restaurants // Assuming they're already in added order
+        case .recentlyViewed:
+            return restaurants // TODO: Sort by recently viewed (would need view tracking)
         case .alphabetical:
             return restaurants.sorted { $0.name < $1.name }
-        case .rating:
-            return restaurants.sorted { $0.rating > $1.rating }
-        case .distance:
-            return restaurants.sorted { ($0.latitude + $0.longitude) < ($1.latitude + $1.longitude) } // Simple distance approximation
         }
     }
     
     var body: some View {
-        if isGridView {
-            // Grid view - 3 cards per row, Spotify-style
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), 
-                spacing: 16
-            ) {
-                ForEach(sortedRestaurants) { restaurant in
-                    RestaurantGridCard(restaurant: restaurant)
-                        .environmentObject(store)
-                        .onTapGesture {
-                            HapticManager.shared.medium()
-                            onRestaurantSelect(restaurant)
-                        }
-                }
+        // All Spots always shows list view
+        LazyVStack(spacing: 12) {
+            ForEach(sortedRestaurants) { restaurant in
+                RestaurantListCard(restaurant: restaurant)
+                    .environmentObject(store)
+                    .onTapGesture {
+                        HapticManager.shared.medium()
+                        onRestaurantSelect(restaurant)
+                    }
             }
-            .padding(.horizontal, 16)
-        } else {
-            // List view
-            LazyVStack(spacing: 12) {
-                ForEach(sortedRestaurants) { restaurant in
-                    RestaurantListCard(restaurant: restaurant)
-                        .environmentObject(store)
-                        .onTapGesture {
-                            HapticManager.shared.medium()
-                            onRestaurantSelect(restaurant)
-                        }
-                }
-            }
-            .padding(.horizontal, 16)
         }
+        .padding(.horizontal, 16)
     }
 }
 
@@ -955,6 +1098,14 @@ struct SpotsListContent: View {
 struct RestaurantGridCard: View {
     let restaurant: Restaurant
     @EnvironmentObject var store: RestaurantStore
+    @State private var showingOptions = false
+    @State private var showingAddToCollection = false
+    
+    private var isInCollection: Bool {
+        store.collections.contains { collection in
+            collection.restaurantIds.contains(restaurant.id)
+        }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -968,7 +1119,7 @@ struct RestaurantGridCard: View {
                     .fill(restaurant.category.color.opacity(0.2))
                     .overlay(
                         Image(systemName: restaurant.category.icon)
-                            .font(.system(size: 20))
+                            .font(.clashDisplayRestaurantNameTemp(size: 20))
                             .foregroundColor(restaurant.category.color)
                     )
             }
@@ -978,22 +1129,35 @@ struct RestaurantGridCard: View {
             // Content section with fixed height
             VStack(alignment: .leading, spacing: 4) {
                 Text(restaurant.name)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.clashDisplaySmallTemp())
                     .foregroundColor(.primary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                 
                 HStack(spacing: 3) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 9))
-                        .foregroundColor(.yellow)
-                    
-                    Text(String(format: "%.1f", restaurant.rating))
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                    
                     Spacer()
+                    
+                    // Collection indicator: red tick if in collection, grey + if not
+                    Button(action: {
+                        HapticManager.shared.light()
+                        if isInCollection {
+                            // TODO: Remove from collections
+                        } else {
+                            showingAddToCollection = true
+                        }
+                    }) {
+                        Group {
+                            if isInCollection {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.reelEatsAccent)
+                            } else {
+                                Image(systemName: "plus.circle")
+                                    .foregroundColor(.gray.opacity(0.6))
+                            }
+                        }
+                        .font(.clashDisplayBodyTemp(size: 18))
+                    }
                 }
             }
             .padding(.horizontal, 4)
@@ -1026,9 +1190,11 @@ struct CollectionsEmbeddedContent: View {
     private var filteredCollections: [Collection] {
         switch collectionFilter {
         case .byMe:
-            return store.collections
+            return store.collections.filter { $0.filterType == .byMe }
+        case .byUs:
+            return store.collections.filter { $0.filterType == .byUs }
         case .byOthers:
-            return [] // No "by others" collections in demo
+            return store.collections.filter { $0.filterType == .byOthers }
         }
     }
     
@@ -1087,7 +1253,7 @@ struct CollectionListCard: View {
                             .fill(restaurant.category.color.opacity(0.3))
                             .overlay(
                                 Image(systemName: restaurant.category.icon)
-                                    .font(.system(size: 16))
+                                    .font(.clashDisplayBodyTemp())
                                     .foregroundColor(restaurant.category.color)
                             )
                     }
@@ -1104,11 +1270,11 @@ struct CollectionListCard: View {
             // Collection info
             VStack(alignment: .leading, spacing: 4) {
                 Text(collection.name)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.clashDisplayButtonTemp(size: 18))
                     .foregroundColor(.primary)
                 
                 Text("\(restaurantsInCollection.count) spots")
-                    .font(.system(size: 14))
+                    .font(.clashDisplaySecondaryTemp())
                     .foregroundColor(.secondary)
             }
             
@@ -1116,7 +1282,7 @@ struct CollectionListCard: View {
             
             // Arrow
             Image(systemName: "chevron.right")
-                .font(.system(size: 14))
+                .font(.clashDisplaySecondaryTemp())
                 .foregroundColor(.secondary)
         }
         .padding(.horizontal, 16)
@@ -1187,7 +1353,7 @@ struct SearchView: View {
         NavigationView {
             VStack {
                 Text("Search functionality coming soon!")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.clashDisplayBodyTemp(size: 18))
                     .foregroundColor(.secondary)
                     .padding(.top, 50)
                 
@@ -1218,8 +1384,9 @@ enum SavedViewType: String, CaseIterable {
 }
 
 enum CollectionFilterType: String, CaseIterable {
-    case byMe = "By me"
-    case byOthers = "By others"
+    case byMe = "By Me"
+    case byUs = "By Us"
+    case byOthers = "By Others"
 }
 
 enum SortOption: String, CaseIterable {
@@ -1264,10 +1431,11 @@ struct SavedTabView: View {
     @State private var showingProfile = false
     @State private var sortOption: SortOption = .recents
     @State private var showingSortOptions = false
-    @State private var isGridView = false
+    // Grid/List toggle removed - using dedicated views for All Spots (list) and Collections (grid)
     @State private var showingRestaurantDetail = false
     @State private var collectionFilter: CollectionFilterType = .byMe
-    @State private var isCollectionsGridView = true // Default to grid for collections
+    // Collections always use grid view
+    
     
     private var headerView: some View {
         VStack(spacing: 0) {
@@ -1278,7 +1446,9 @@ struct SavedTabView: View {
                     
                     Text("ReelEats")
                         .font(.poppinsLogoTemp(size: 22))
+                        .fontWeight(.black)
                         .foregroundColor(.primary)
+                        .shadow(color: .primary.opacity(0.1), radius: 0, x: 0.5, y: 0.5)
                 }
                 
                 Spacer()
@@ -1288,21 +1458,14 @@ struct SavedTabView: View {
                     HapticManager.shared.light()
                     showingProfile = true
                 }) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.blue, Color.purple, Color.cyan],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 32, height: 32)
-                        
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white)
-                    }
+                    Circle()
+                        .fill(Color.reelEatsAccent.opacity(0.2))
+                        .frame(width: 32, height: 32)
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .font(.clashDisplayBodyTemp())
+                                .foregroundColor(.reelEatsAccent)
+                        )
                 }
             }
             .padding(.horizontal, 20)
@@ -1326,7 +1489,7 @@ struct SavedTabView: View {
                         }) {
                             HStack {
                                 Image(systemName: option.icon)
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.clashDisplayBodyTemp())
                                     .foregroundColor(sortOption == option ? .black : .secondary)
                                     .frame(width: 20)
                                 
@@ -1338,7 +1501,7 @@ struct SavedTabView: View {
                                 
                                 if sortOption == option {
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 14, weight: .medium))
+                                        .font(.clashDisplaySecondaryTemp())
                                         .foregroundColor(.black)
                                 }
                             }
@@ -1379,12 +1542,8 @@ struct SavedTabView: View {
                         EmptyStateView()
                             .transition(.opacity)
                     } else {
-                        if isGridView {
-                            Text("Grid view coming soon...")
-                                .foregroundColor(.secondary)
-                                .padding()
-                        } else {
-                            RestaurantListView(
+                        // All Spots always uses list view
+                        RestaurantListView(
                                 restaurants: sortedFilteredRestaurants,
                                 onRestaurantTap: { restaurant in
                                     selectedRestaurant = restaurant
@@ -1392,54 +1551,17 @@ struct SavedTabView: View {
                                 }
                             )
                             .transition(.opacity)
-                        }
                     }
                 } else {
-                    if isCollectionsGridView {
-                        CollectionsGridView(
-                            collections: filteredCollections,
-                            onCollectionTap: { collection in
-                                selectedCollection = collection
-                            }
-                        )
-                        .transition(.opacity)
-                    } else {
-                        // List view for collections
-                        ScrollView {
-                            LazyVStack(spacing: 12) {
-                                ForEach(store.collections) { collection in
-                                    CollectionListCard(collection: collection) {
-                                        selectedCollection = collection
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.top, 20)
-                            .padding(.bottom, 100)
+                    // Collections always use grid view
+                    CollectionsGridView(
+                        collections: filteredCollections,
+                        onCollectionTap: { collection in
+                            selectedCollection = collection
                         }
-                    }
+                    )
+                    .transition(.opacity)
                 }
-            }
-        }
-        .navigationBarHidden(true)
-        .edgesIgnoringSafeArea(.top)
-        .fullScreenCover(item: $selectedCollection) { collection in
-            CollectionDetailView(collection: collection, onRestaurantSelect: onRestaurantSelect)
-                .environmentObject(store)
-        }
-        .sheet(isPresented: $showingProfile) {
-            ProfileTabView()
-                .environmentObject(store)
-        }
-        .sheet(isPresented: $showingRestaurantDetail) {
-            if let restaurant = selectedRestaurant {
-                FullScreenRestaurantDetailView(restaurant: restaurant)
-                    .environmentObject(store)
-            }
-        }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 0.6)) {
-                isAnimating = true
             }
         }
     }
@@ -1455,6 +1577,8 @@ struct SavedTabView: View {
         switch collectionFilter {
         case .byMe:
             return store.collections
+        case .byUs:
+            return [] // No "by us" collections in demo
         case .byOthers:
             return [] // No "by others" collections in demo
         }
@@ -1517,16 +1641,12 @@ struct UberStyleBottomSheet<Content: View>: View {
                     
                     VStack(spacing: 0) {
                         // Handle bar
-                        RoundedRectangle(cornerRadius: 2.5)
-                            .fill(Color(.systemGray4))
-                            .frame(width: 36, height: 4)
-                            .padding(.top, 12)
-                            .padding(.bottom, 16)
+                        ConsistentDragHandle()
                         
                         // Title
                         HStack {
                             Text(title)
-                                .font(.system(size: 20, weight: .semibold))
+                                .font(.clashDisplayButtonTemp(size: 20))
                                 .foregroundColor(.primary)
                             
                             Spacer()
@@ -1537,7 +1657,7 @@ struct UberStyleBottomSheet<Content: View>: View {
                                 }
                             }) {
                                 Image(systemName: "xmark")
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.clashDisplayBodyTemp())
                                     .foregroundColor(.secondary)
                                     .padding(8)
                                     .background(Color(.systemGray6))
@@ -1572,14 +1692,14 @@ struct FilterOptionItem: View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.clashDisplayBodyTemp())
                     .foregroundColor(.primary)
                 
                 Spacer()
                 
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.clashDisplayButtonTemp())
                         .foregroundColor(.blue)
                 }
             }
@@ -1596,6 +1716,7 @@ struct FilterOptionItem: View {
 struct GoogleStyleCuisineGrid: View {
     let cuisineOptions: [String]
     let selectedOptions: Set<String>
+    @Binding var isPresented: Bool
     let onSelection: (String) -> Void
     
     // Cuisine to emoji mapping
@@ -1603,84 +1724,95 @@ struct GoogleStyleCuisineGrid: View {
         switch cuisine.lowercased() {
         case "italian":
             return "🍝"
-        case "japanese":
-            return "🍣"
-        case "chinese":
-            return "🥡"
+        case "asian":
+            return "🍜"
         case "mexican":
             return "🌮"
-        case "american":
-            return "🍔"
-        case "french":
-            return "🥖"
-        case "indian":
-            return "🍛"
-        case "thai":
-            return "🍜"
         case "korean":
             return "🍲"
-        case "vietnamese":
-            return "🥢"
-        case "mediterranean":
-            return "🫒"
-        case "greek":
-            return "🧆"
-        case "turkish":
-            return "🥙"
-        case "spanish":
-            return "🥘"
-        case "british":
-            return "🫖"
-        case "german":
-            return "🥨"
-        case "lebanese":
-            return "🧄"
-        case "moroccan":
-            return "🌶️"
-        case "ethiopian":
-            return "🌶️"
-        case "brazilian":
-            return "🥥"
+        case "chinese":
+            return "🥡"
         case "pizza":
             return "🍕"
         case "burgers":
             return "🍔"
-        case "seafood":
-            return "🦐"
-        case "steakhouse":
-            return "🥩"
-        case "vegetarian":
+        case "cafe":
+            return "☕"
+        case "fine dining":
+            return "🥂"
+        case "brunch":
+            return "🥞"
+        case "bars":
+            return "🍸"
+        case "healthy":
             return "🥗"
-        case "vegan":
-            return "🌱"
         case "desserts":
             return "🍰"
-        case "coffee":
-            return "☕"
-        case "bakery":
-            return "🥐"
+        case "seafood":
+            return "🦐"
+        case "bbq":
+            return "🍖"
         default:
             return "🍽️"
         }
     }
     
     var body: some View {
-        ScrollView {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
-                ForEach(cuisineOptions, id: \.self) { cuisine in
-                    CuisineGridItem(
-                        emoji: emojiForCuisine(cuisine),
-                        title: cuisine,
-                        isSelected: selectedOptions.contains(cuisine)
-                    ) {
-                        onSelection(cuisine)
+        VStack(spacing: 0) {
+            ScrollView {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
+                    ForEach(cuisineOptions, id: \.self) { cuisine in
+                        CuisineGridItem(
+                            emoji: emojiForCuisine(cuisine),
+                            title: cuisine,
+                            isSelected: selectedOptions.contains(cuisine)
+                        ) {
+                            onSelection(cuisine)
+                        }
                     }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 24)
+            }
+            .frame(maxHeight: 480) // Increased height to accommodate 15 items
+            
+            // Apply and Reset buttons - always visible at bottom
+            HStack(spacing: 12) {
+                Button(action: {
+                    // Reset all selections
+                    for option in selectedOptions {
+                        onSelection(option)
+                    }
+                }) {
+                    Text("Reset")
+                        .font(.newYorkButton())
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                }
+                
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isPresented = false
+                    }
+                    GlobalOverlayManager.shared.dismiss()
+                }) {
+                    Text("Apply")
+                        .font(.newYorkButton())
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.reelEatsAccent)
+                        .cornerRadius(12)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
+            .background(Color(.systemBackground))
         }
-        .frame(maxHeight: 400)
     }
 }
 
@@ -1694,17 +1826,17 @@ struct CuisineGridItem: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Text(emoji)
-                    .font(.system(size: 32))
+                    .font(.clashDisplayHeaderTemp(size: 24))
                 
                 Text(title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.clashDisplayCaptionTemp(size: 12))
                     .foregroundColor(isSelected ? .white : .primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
             }
-            .frame(maxWidth: .infinity, minHeight: 80)
+            .frame(maxWidth: .infinity, minHeight: 70)
             .padding(.horizontal, 8)
             .padding(.vertical, 12)
             .background(
@@ -1735,11 +1867,11 @@ struct CategoryFilterButton: View {
                 // Modern emoji + icon combination
                 HStack(spacing: 4) {
                     Text(category.emoji)
-                        .font(.system(size: 16))
+                        .font(.clashDisplayBodyTemp())
                     
                     if isSelected {
                         Image(systemName: category.icon)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.clashDisplayCaptionTemp())
                             .foregroundColor(.white)
                     }
                 }
@@ -1803,7 +1935,7 @@ struct EmptyStateView: View {
             VStack(spacing: 16) {
                 HStack {
                     Text("Get Started")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.clashDisplayBodyTemp())
                         .foregroundColor(.orange)
                     
                     Spacer()
@@ -1816,11 +1948,11 @@ struct EmptyStateView: View {
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Import 3 posts")
-                        .font(.system(size: 24, weight: .bold))
+                        .font(.clashDisplayCardTitleTemp())
                         .foregroundColor(.primary)
                     
                     Text("How to share from other apps")
-                        .font(.system(size: 16))
+                        .font(.clashDisplayBodyTemp())
                         .foregroundColor(.secondary)
                 }
             }
@@ -1895,7 +2027,15 @@ struct CollectionRestaurantCard: View {
     @EnvironmentObject var store: RestaurantStore
     @State private var imageLoaded = false
     @State private var showingRatingSlider = false
+    @State private var showingOptions = false
+    @State private var showingAddToCollection = false
     @State private var tempRating: Double = 0.0
+    
+    private var isInCollection: Bool {
+        store.collections.contains { collection in
+            collection.restaurantIds.contains(restaurant.id)
+        }
+    }
     
     var body: some View {
         Button(action: onTap) {
@@ -1918,53 +2058,38 @@ struct CollectionRestaurantCard: View {
                     )
                     .overlay(
                         Text(restaurant.emoji)
-                            .font(.system(size: 32))
+                            .font(.clashDisplayHeaderTemp(size: 32))
                     )
                 }
-                .frame(height: 140)
+                .frame(height: 120)
                 .clipped()
                 .overlay(
-                    // Visit status badge
+                    // Collection indicator - bottom right only
                     VStack {
+                        Spacer()
+                        
                         HStack {
                             Spacer()
                             
                             Button(action: {
                                 HapticManager.shared.light()
-                                toggleVisitStatus()
+                                if isInCollection {
+                                    // TODO: Remove from collections
+                                } else {
+                                    // TODO: Add to collection
+                                    showingOptions = true
+                                }
                             }) {
-                                Image(systemName: userVisitStatus.icon)
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.white)
-                                    .frame(width: 32, height: 32)
-                                    .background(
-                                        Circle()
-                                            .fill(userVisitStatus == .visited ? .green : .gray.opacity(0.8))
-                                    )
-                                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                            }
-                        }
-                        .padding(.trailing, 12)
-                        .padding(.top, 12)
-                        
-                        Spacer()
-                        
-                        // 5 star rating system - bottom right, smaller
-                        HStack {
-                            Spacer()
-                            
-                            HStack(spacing: 1) {
-                                ForEach(1...5, id: \.self) { star in
-                                    Button(action: {
-                                        HapticManager.shared.light()
-                                        tempRating = userRating
-                                        showingRatingSlider = true
-                                    }) {
-                                        Image(systemName: star <= Int(userRating) ? "star.fill" : "star")
-                                            .font(.system(size: 10))
-                                            .foregroundColor(star <= Int(userRating) ? .black : .gray.opacity(0.3))
+                                Group {
+                                    if isInCollection {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.reelEatsAccent)
+                                    } else {
+                                        Image(systemName: "plus.circle")
+                                            .foregroundColor(.gray.opacity(0.6))
                                     }
                                 }
+                                .font(.clashDisplayBodyTemp(size: 18))
                             }
                         }
                         .padding(.trailing, 12)
@@ -1972,16 +2097,35 @@ struct CollectionRestaurantCard: View {
                     }
                 )
                 
-                // Restaurant info
+                // Restaurant info with inline visit status button
                 VStack(alignment: .leading, spacing: 6) {
                     Text(restaurant.name)
                         .font(.poppinsRestaurantNameTemp(size: 17))
                         .foregroundColor(.primary)
                         .lineLimit(2)
                     
-                    Text(locationDisplay)
-                        .font(.poppinsSecondaryTemp(size: 13))
-                        .foregroundColor(.secondary)
+                    HStack {
+                        Text(locationDisplay)
+                            .font(.poppinsSecondaryTemp(size: 13))
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        // Visit status button moved here
+                        Button(action: {
+                            HapticManager.shared.light()
+                            toggleVisitStatus()
+                        }) {
+                            Image(systemName: userVisitStatus.icon)
+                                .font(.clashDisplayBodyTemp())
+                                .foregroundColor(userVisitStatus == .visited ? .green : .gray)
+                                .frame(width: 24, height: 24)
+                                .background(
+                                    Circle()
+                                        .fill(userVisitStatus == .visited ? Color.green.opacity(0.2) : Color.gray.opacity(0.1))
+                                )
+                        }
+                    }
                 }
                 .padding(.horizontal, 4)
             }
@@ -2076,7 +2220,11 @@ struct CollectionDetailView: View {
     @State private var showingRestaurantDetail = false
     @State private var selectedFilter: CollectionFilterType = .byMe
     @State private var selectedSort: SortOption = .alphabetical
-    @State private var isGridView = true
+    // Filter dropdown states
+    @State private var showingCuisineDropdown = false
+    @State private var showingDistanceDropdown = false
+    @State private var showingPriceDropdown = false
+    @State private var showingCollectionsDropdown = false
     
     private var collectionSpots: [Restaurant] {
         let filtered = store.savedRestaurants.filter { restaurant in
@@ -2113,13 +2261,13 @@ struct CollectionDetailView: View {
         if collectionSpots.isEmpty {
             VStack(spacing: 20) {
                 Text("No spots in this collection")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.clashDisplayBodyTemp(size: 18))
                     .foregroundColor(.secondary)
                 
                 Button("Add Spots") {
                     showingAddSpots = true
                 }
-                .font(.system(size: 16, weight: .semibold))
+                .font(.clashDisplayButtonTemp())
                 .foregroundColor(.white)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
@@ -2129,76 +2277,21 @@ struct CollectionDetailView: View {
             .padding(.top, 50)
             .padding(.bottom, 100)
         } else {
-            if isGridView {
-                // Grid view - same as Collections tab
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 2), spacing: 16) {
-                    ForEach(collectionSpots) { restaurant in
-                        CollectionRestaurantCard(
-                            restaurant: restaurant,
-                            onTap: {
-                                selectedRestaurant = restaurant
-                                showingRestaurantDetail = true
-                            }
-                        )
+            // List view - exactly like All Spots with same card layout
+            LazyVStack(spacing: 12) {
+                ForEach(collectionSpots) { restaurant in
+                    RestaurantListCard(restaurant: restaurant)
                         .environmentObject(store)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, 100)
-            } else {
-                // List view - removed numbering
-                VStack(spacing: 0) {
-                    ForEach(collectionSpots) { restaurant in
-                        HStack(spacing: 12) {
-                            // Restaurant image (no numbering)
-                            LinearGradient(
-                                colors: [restaurant.category.color.opacity(0.2), restaurant.category.color.opacity(0.05)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                            .overlay(
-                                Text(restaurant.emoji)
-                                    .font(.system(size: 24))
-                            )
-                            .frame(width: 56, height: 56)
-                            .cornerRadius(4)
-                            
-                            // Restaurant info
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(restaurant.name)
-                                    .font(.poppinsRestaurantNameTemp(size: 16))
-                                    .foregroundColor(.primary)
-                                    .lineLimit(1)
-                                
-                                Text(restaurant.description)
-                                    .font(.system(size: 14, weight: .bold, design: .default))
-                                    .italic()
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                            }
-                            
-                            Spacer()
-                            
-                            // Three dots menu
-                            Button(action: {}) {
-                                Image(systemName: "ellipsis")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                        .contentShape(Rectangle())
                         .onTapGesture {
+                            HapticManager.shared.medium()
                             selectedRestaurant = restaurant
                             showingRestaurantDetail = true
                         }
-                    }
                 }
-                .padding(.top, 12)
-                .padding(.bottom, 100)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 100)
         }
     }
     
@@ -2246,7 +2339,7 @@ struct CollectionDetailView: View {
                         dismiss()
                     }) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .medium))
+                            .font(.clashDisplayRestaurantNameTemp(size: 20))
                             .foregroundColor(.white)
                     }
                     .padding(.top, 50)
@@ -2269,7 +2362,7 @@ struct CollectionDetailView: View {
                     .frame(width: 180, height: 180)
                     .overlay(
                         Text(collection.name.prefix(1).uppercased())
-                            .font(.system(size: 60, weight: .bold))
+                            .font(.clashDisplayHeaderTemp(size: 60))
                             .foregroundColor(.white.opacity(0.8))
                     )
                     .shadow(color: .black.opacity(0.3), radius: 15, x: 0, y: 8)
@@ -2291,31 +2384,28 @@ struct CollectionDetailView: View {
                         
                         // Creator and collaborators section (like Spotify)
                         HStack(spacing: 12) {
-                            // Creator profile circle
+                            // Creator profile circle (smaller)
                             Circle()
-                                .fill(Color.orange)
-                                .frame(width: 32, height: 32)
+                                .fill(Color.reelEatsAccent)
+                                .frame(width: 28, height: 28)
                                 .overlay(
                                     Text("J")
-                                        .font(.system(size: 16, weight: .bold))
+                                        .font(.clashDisplaySecondaryTemp())
                                         .foregroundColor(.white)
                                 )
                             
-                            // Collaborator circles (if any)
-                            ForEach(0..<2, id: \.self) { index in
+                            // Collaborator circles (colored with letters, smaller)
+                            ForEach(Array(["M", "A"].enumerated()), id: \.offset) { index, letter in
+                                let colors: [Color] = [.blue, .green, .orange, .purple]
                                 Circle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .frame(width: 32, height: 32)
+                                    .fill(colors[index % colors.count])
+                                    .frame(width: 28, height: 28)
                                     .overlay(
-                                        Image(systemName: "plus")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(.gray)
+                                        Text(letter)
+                                            .font(.clashDisplaySecondaryTemp())
+                                            .foregroundColor(.white)
                                     )
                             }
-                            
-                            Text("Julz")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.primary)
                             
                             Spacer()
                         }
@@ -2323,7 +2413,7 @@ struct CollectionDetailView: View {
                         
                         // Spots count (like playlist duration)
                         Text("\(collectionSpots.count) spots")
-                            .font(.system(size: 14))
+                            .font(.clashDisplaySecondaryTemp())
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 20)
                     }
@@ -2333,7 +2423,7 @@ struct CollectionDetailView: View {
                         // Add Collaborators (same icon as Spotify)
                         Button(action: {}) {
                             Image(systemName: "person.badge.plus")
-                                .font(.system(size: 24))
+                                .font(.clashDisplayHeaderTemp())
                                 .foregroundColor(.secondary)
                         }
                         
@@ -2342,7 +2432,7 @@ struct CollectionDetailView: View {
                             showingShareSheet = true
                         }) {
                             Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 24))
+                                .font(.clashDisplayHeaderTemp())
                                 .foregroundColor(.secondary)
                         }
                         
@@ -2351,7 +2441,7 @@ struct CollectionDetailView: View {
                             showingAddSpots = true
                         }) {
                             Image(systemName: "plus")
-                                .font(.system(size: 24))
+                                .font(.clashDisplayHeaderTemp())
                                 .foregroundColor(.secondary)
                         }
                         
@@ -2360,7 +2450,7 @@ struct CollectionDetailView: View {
                             showingEditCollection = true
                         }) {
                             Image(systemName: "pencil")
-                                .font(.system(size: 24))
+                                .font(.clashDisplayHeaderTemp())
                                 .foregroundColor(.secondary)
                         }
                         
@@ -2368,70 +2458,45 @@ struct CollectionDetailView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Filter pills and controls (same as Collections tab)
-                    VStack(spacing: 16) {
-                        // Filter pills
-                        HStack(spacing: 12) {
-                            ForEach(CollectionFilterType.allCases, id: \.self) { filter in
+                    // Filter pills (matching All Spots style)
+                    FilterBar(
+                        showingCuisineDropdown: $showingCuisineDropdown,
+                        showingDistanceDropdown: $showingDistanceDropdown,
+                        showingPriceDropdown: $showingPriceDropdown,
+                        showingCollectionsDropdown: $showingCollectionsDropdown
+                    )
+                    .padding(.top, 8)
+                    
+                    // Sort section only
+                    HStack(spacing: 16) {
+                        // Sort dropdown
+                        Menu {
+                            ForEach(SortOption.allCases, id: \.self) { option in
                                 Button(action: {
-                                    selectedFilter = filter
+                                    selectedSort = option
                                 }) {
-                                    Text(filter.rawValue)
-                                        .font(.system(size: 14, weight: selectedFilter == filter ? .semibold : .medium))
-                                        .foregroundColor(selectedFilter == filter ? .primary : .secondary)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 20)
-                                                .fill(selectedFilter == filter ? Color(.systemGray5) : Color.clear)
-                                        )
-                                }
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal, 20)
-                        
-                        // Sorting and view toggle
-                        HStack(spacing: 16) {
-                            // Sort dropdown
-                            Menu {
-                                ForEach(SortOption.allCases, id: \.self) { option in
-                                    Button(action: {
-                                        selectedSort = option
-                                    }) {
-                                        HStack {
-                                            Text(option.displayName)
-                                            if selectedSort == option {
-                                                Image(systemName: "checkmark")
-                                            }
+                                    HStack {
+                                        Text(option.displayName)
+                                        if selectedSort == option {
+                                            Image(systemName: "checkmark")
                                         }
                                     }
                                 }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "arrow.up.arrow.down")
-                                        .font(.system(size: 14))
-                                    Text(selectedSort.displayName)
-                                        .font(.system(size: 14, weight: .medium))
-                                }
-                                .foregroundColor(.primary)
                             }
-                            
-                            Spacer()
-                            
-                            // Grid/List toggle
-                            Button(action: {
-                                isGridView.toggle()
-                            }) {
-                                Image(systemName: isGridView ? "list.bullet" : "square.grid.2x2")
-                                    .font(.system(size: 18))
-                                    .foregroundColor(.primary)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.up.arrow.down")
+                                    .font(.clashDisplaySecondaryTemp())
+                                Text(selectedSort.displayName)
+                                    .font(.clashDisplaySecondaryTemp())
                             }
+                            .foregroundColor(.primary)
                         }
-                        .padding(.horizontal, 20)
+                        
+                        Spacer()
                     }
-                    .padding(.top, 8)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
                     
                     // Restaurant list with grid/list views
                     restaurantListSection
@@ -2453,11 +2518,7 @@ struct RestaurantOptionsSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             // Handle indicator
-            RoundedRectangle(cornerRadius: 2.5)
-                .fill(Color(.systemGray4))
-                .frame(width: 40, height: 4)
-                .padding(.top, 12)
-                .padding(.bottom, 20)
+            ConsistentDragHandle()
             
             // Restaurant header
             HStack(spacing: 12) {
@@ -2468,7 +2529,7 @@ struct RestaurantOptionsSheet: View {
                 )
                 .overlay(
                     Text(restaurant.emoji)
-                        .font(.system(size: 22))
+                        .font(.clashDisplayHeaderTemp(size: 22))
                 )
                 .frame(width: 50, height: 50)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -2480,7 +2541,7 @@ struct RestaurantOptionsSheet: View {
                         .lineLimit(1)
                     
                     Text(restaurant.description)
-                        .font(.system(size: 14, weight: .bold, design: .default))
+                        .font(.clashDisplaySecondaryTemp())
                         .italic()
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -2569,24 +2630,24 @@ struct OptionsButton: View {
                     .frame(width: 44, height: 44)
                     .overlay(
                         Image(systemName: icon)
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.clashDisplayBodyTemp(size: 18))
                             .foregroundColor(.primary)
                     )
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.clashDisplayBodyTemp())
                         .foregroundColor(.primary)
                     
                     Text(subtitle)
-                        .font(.system(size: 14))
+                        .font(.clashDisplaySecondaryTemp())
                         .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.clashDisplaySecondaryTemp())
                     .foregroundColor(.secondary)
             }
             .padding(.vertical, 16)
@@ -2612,7 +2673,7 @@ struct AirbnbStyleSpotCard: View {
             )
             .overlay(
                 Text(restaurant.emoji)
-                    .font(.system(size: 80))
+                    .font(.clashDisplayHeaderTemp(size: 80))
             )
             .frame(height: 185)
             .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -2633,7 +2694,7 @@ struct AirbnbStyleSpotCard: View {
                     // Enhanced star rating
                     HStack(spacing: 2) {
                         Image(systemName: "star.fill")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.clashDisplaySmallTemp())
                             .foregroundColor(.orange)
                         
                         Text(String(format: "%.1f", restaurant.rating))
@@ -2643,7 +2704,7 @@ struct AirbnbStyleSpotCard: View {
                     }
                     
                     Text("•")
-                        .font(.system(size: 12))
+                        .font(.clashDisplayCaptionTemp())
                         .foregroundColor(.secondary.opacity(0.6))
                     
                     Text(restaurant.description)
@@ -2690,7 +2751,7 @@ struct CollaboratorAvatars: View {
                     .frame(width: 24, height: 24)
                     .overlay(
                         Text("+\(colors.count - 3)")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.clashDisplayCaptionTemp(size: 10))
                             .foregroundColor(.secondary)
                     )
                     .overlay(
@@ -2716,16 +2777,16 @@ struct EmptyCollectionState: View {
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "folder")
-                .font(.system(size: 60))
+                .font(.clashDisplayHeaderTemp(size: 60))
                 .foregroundColor(.secondary.opacity(0.5))
             
             VStack(spacing: 8) {
                 Text("No spots yet")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.clashDisplayButtonTemp(size: 20))
                     .foregroundColor(.primary)
                 
                 Text("Start adding spots to your \(collectionName) collection")
-                    .font(.system(size: 16))
+                    .font(.clashDisplayBodyTemp())
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -2796,13 +2857,13 @@ struct CollectionAlbumCard: View {
                     
                     if isCollaborative {
                         Image(systemName: "person.2.fill")
-                            .font(.system(size: 12))
+                            .font(.clashDisplayCaptionTemp())
                             .foregroundColor(.secondary)
                     }
                 }
                 
-                Text("\(collection.restaurantIds.count) spots")
-                    .font(.system(size: 14))
+                Text("\(collection.restaurantIds.count) spots • \(collection.creatorText)")
+                    .font(.clashDisplaySecondaryTemp())
                     .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -2856,6 +2917,7 @@ struct RestaurantListCard: View {
     @State private var imageLoaded = false
     @State private var showingOptions = false
     @State private var showingRatingSlider = false
+    @State private var showingAddToCollection = false
     @State private var tempRating: Double = 0.0
     
     var body: some View {
@@ -2868,7 +2930,7 @@ struct RestaurantListCard: View {
             )
             .overlay(
                 Text(restaurant.emoji)
-                    .font(.system(size: 32))
+                    .font(.clashDisplayHeaderTemp(size: 32))
             )
             .onAppear {
                 withAnimation(.easeInOut(duration: 0.3)) {
@@ -2883,7 +2945,7 @@ struct RestaurantListCard: View {
                 // Restaurant name with three dots on same line
                 HStack {
                     Text(restaurantDisplayName)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.clashDisplayButtonTemp())
                         .foregroundColor(.primary)
                         .lineLimit(1)
                     
@@ -2895,7 +2957,7 @@ struct RestaurantListCard: View {
                         showingOptions = true
                     }) {
                         Image(systemName: "ellipsis")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.clashDisplayBodyTemp())
                             .foregroundColor(.secondary)
                             .frame(width: 24, height: 24)
                     }
@@ -2903,32 +2965,39 @@ struct RestaurantListCard: View {
                 
                 // Description only
                 Text(restaurant.description)
-                    .font(.system(size: 14, weight: .bold, design: .default))
+                    .font(.clashDisplaySecondaryTemp())
                     .italic()
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                 
                 // Location
                 Text(locationDisplay)
-                    .font(.system(size: 13))
+                    .font(.clashDisplaySmallTemp())
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                 
-                // 5 star rating system - below location, smaller and on right
+                // Collection indicator: red tick if in collection, grey + if not
                 HStack {
                     Spacer()
                     
-                    HStack(spacing: 1) {
-                        ForEach(1...5, id: \.self) { star in
-                            Button(action: {
-                                HapticManager.shared.light()
-                                showingRatingSlider = true
-                            }) {
-                                Image(systemName: star <= Int(userRating) ? "star.fill" : "star")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(star <= Int(userRating) ? .black : .gray.opacity(0.3))
+                    Button(action: {
+                        HapticManager.shared.light()
+                        if isInCollection {
+                            // TODO: Remove from collections
+                        } else {
+                            showingAddToCollection = true
+                        }
+                    }) {
+                        Group {
+                            if isInCollection {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.reelEatsAccent)
+                            } else {
+                                Image(systemName: "plus.circle")
+                                    .foregroundColor(.gray.opacity(0.6))
                             }
                         }
+                        .font(.clashDisplayBodyTemp(size: 18))
                     }
                 }
                 .padding(.top, 2)
@@ -2957,6 +3026,10 @@ struct RestaurantListCard: View {
             )
             .presentationDetents([.height(450)])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingAddToCollection) {
+            AddToCollectionModal(restaurant: restaurant)
+                .environmentObject(store)
         }
     }
     
@@ -2993,6 +3066,12 @@ struct RestaurantListCard: View {
     
     private var userRating: Double {
         store.getUserData(for: restaurant.id)?.userRating ?? 0.0
+    }
+    
+    private var isInCollection: Bool {
+        store.collections.contains { collection in
+            collection.restaurantIds.contains(restaurant.id)
+        }
     }
     
     private func toggleVisitStatus() {
@@ -3036,7 +3115,7 @@ struct RestaurantCard: View {
             )
             .overlay(
                 Text(restaurant.emoji)
-                    .font(.system(size: 60))
+                    .font(.clashDisplayHeaderTemp(size: 60))
             )
             .onAppear {
                 withAnimation(.easeInOut(duration: 0.3)) {
@@ -3051,7 +3130,7 @@ struct RestaurantCard: View {
                     HStack {
                         HStack(spacing: 6) {
                             Image(systemName: restaurant.category.icon)
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.clashDisplayCaptionTemp())
                             Text(restaurant.tags.first ?? restaurant.category.rawValue)
                                 .font(.poppinsAccentTemp(size: 12))
                         }
@@ -3075,7 +3154,7 @@ struct RestaurantCard: View {
                             toggleVisitStatus()
                         }) {
                             Image(systemName: userVisitStatus.icon)
-                                .font(.system(size: 16, weight: .medium))
+                                .font(.clashDisplayBodyTemp())
                                 .foregroundColor(userVisitStatus == .visited ? .green : .white)
                                 .frame(width: 32, height: 32)
                                 .background(
@@ -3101,7 +3180,7 @@ struct RestaurantCard: View {
                             HStack(spacing: 2) {
                                 ForEach(1...5, id: \.self) { star in
                                     Image(systemName: star <= Int(userRating) ? "star.fill" : "star")
-                                        .font(.system(size: 12))
+                                        .font(.clashDisplayCaptionTemp())
                                         .foregroundColor(star <= Int(userRating) ? .yellow : .gray.opacity(0.3))
                                 }
                             }
@@ -3127,7 +3206,7 @@ struct RestaurantCard: View {
                 
                 HStack(spacing: 6) {
                     Image(systemName: restaurant.source.icon)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.clashDisplaySmallTemp())
                         .foregroundColor(.secondary)
                     
                     Text(restaurant.source.displayName)
@@ -3208,10 +3287,7 @@ struct RatingSliderView: View {
     var body: some View {
         VStack(spacing: 24) {
             // Handle bar
-            RoundedRectangle(cornerRadius: 2.5)
-                .fill(Color(.systemGray4))
-                .frame(width: 40, height: 4)
-                .padding(.top, 8)
+            ConsistentDragHandle()
             
             VStack(spacing: 20) {
                 // Title
@@ -3236,7 +3312,7 @@ struct RatingSliderView: View {
                                 }
                             }) {
                                 Image(systemName: star <= Int(currentRating) ? "star.fill" : "star")
-                                    .font(.system(size: 32))
+                                    .font(.clashDisplayHeaderTemp(size: 32))
                                     .foregroundColor(star <= Int(currentRating) ? .yellow : .gray.opacity(0.3))
                                     .scaleEffect(star <= Int(currentRating) ? (isAnimating ? 1.2 : 1.0) : 1.0)
                                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: currentRating)
@@ -3333,11 +3409,11 @@ struct StarView: View {
     var body: some View {
         ZStack {
             Image(systemName: "star")
-                .font(.system(size: size))
+                .font(.clashDisplayHeaderTemp(size: size))
                 .foregroundColor(.gray.opacity(0.3))
             
             Image(systemName: "star.fill")
-                .font(.system(size: size))
+                .font(.clashDisplayHeaderTemp(size: size))
                 .foregroundColor(.yellow)
                 .mask(
                     GeometryReader { geometry in
@@ -3366,6 +3442,7 @@ struct FullScreenRestaurantDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingRatingSlider = false
     @State private var tempRating: Double = 0.0
+    @State private var editableUserNotes: String = ""
     
     private var userRating: Double {
         store.getUserData(for: restaurant.id)?.userRating ?? 0.0
@@ -3389,7 +3466,7 @@ struct FullScreenRestaurantDetailView: View {
                         dismiss()
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28))
+                            .font(.clashDisplayHeaderTemp(size: 28))
                             .foregroundColor(.secondary.opacity(0.6))
                     }
                     
@@ -3408,7 +3485,7 @@ struct FullScreenRestaurantDetailView: View {
                         )
                         .overlay(
                             Text(restaurant.emoji)
-                                .font(.system(size: 80))
+                                .font(.clashDisplayHeaderTemp(size: 80))
                         )
                         .frame(width: 140, height: 140)
                         .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -3425,11 +3502,11 @@ struct FullScreenRestaurantDetailView: View {
                             HStack(spacing: 16) {
                                 HStack(spacing: 8) {
                                     Image(systemName: "location.fill")
-                                        .font(.system(size: 14))
+                                        .font(.clashDisplaySecondaryTemp())
                                         .foregroundColor(.secondary)
                                     
                                     Text(restaurant.address)
-                                        .font(.system(size: 16))
+                                        .font(.clashDisplayBodyTemp())
                                         .foregroundColor(.secondary)
                                 }
                                 
@@ -3437,89 +3514,91 @@ struct FullScreenRestaurantDetailView: View {
                                     .foregroundColor(.secondary)
                                 
                                 Text(isOpen ? "Open" : "Closed")
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.clashDisplayBodyTemp())
                                     .foregroundColor(isOpen ? .green : .red)
                             }
                             
-                            // Description
+                            // Description (italic)
                             Text(restaurant.description)
-                                .font(.system(size: 18))
+                                .font(.newYorkDescription(size: 18))
+                                .italic()
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 20)
                         }
                         
-                        // User rating section
-                        if userRating > 0 {
-                            VStack(spacing: 12) {
-                                HStack(spacing: 2) {
-                                    ForEach(1...5, id: \.self) { star in
-                                        Image(systemName: star <= Int(userRating) ? "star.fill" : "star")
-                                            .font(.system(size: 24))
-                                            .foregroundColor(star <= Int(userRating) ? .yellow : .gray.opacity(0.3))
-                                    }
-                                }
-                                .onTapGesture {
-                                    HapticManager.shared.light()
-                                    showingRatingSlider = true
-                                }
+                        // Social Media Source Link
+                        Button(action: {
+                            // TODO: Open original social media post
+                            HapticManager.shared.light()
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: getSocialMediaIcon())
+                                    .font(.clashDisplayBodyTemp(size: 18))
+                                    .foregroundColor(.primary)
                                 
-                                if !userNotes.isEmpty {
-                                    Text(userNotes)
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.secondary)
-                                        .italic()
-                                        .padding(.horizontal, 40)
-                                        .multilineTextAlignment(.center)
-                                }
-                            }
-                            .padding(.vertical, 20)
-                            .frame(maxWidth: .infinity)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(16)
-                            .padding(.horizontal, 20)
-                        } else {
-                            Button(action: {
-                                HapticManager.shared.light()
-                                showingRatingSlider = true
-                            }) {
-                                VStack(spacing: 8) {
-                                    HStack(spacing: 2) {
-                                        ForEach(1...5, id: \.self) { _ in
-                                            Image(systemName: "star")
-                                                .font(.system(size: 20))
-                                                .foregroundColor(.gray.opacity(0.3))
-                                        }
-                                    }
-                                    
-                                    Text("Rate this place")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.primary)
-                                }
-                                .padding(.vertical, 20)
-                                .frame(maxWidth: .infinity)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(16)
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                        
-                        // Source info
-                        if restaurant.source != .web {
-                            HStack {
-                                Image(systemName: restaurant.source.icon)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
-                                
-                                Text("Imported from \(restaurant.source.displayName)")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.secondary)
+                                Text("View original post")
+                                    .font(.clashDisplaySecondaryTemp())
+                                    .foregroundColor(.primary)
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
                             .background(Color(.systemGray6))
                             .cornerRadius(20)
                         }
+                        
+                        // User Rating Section
+                        VStack(spacing: 12) {
+                            Text("Your Rating")
+                                .font(.clashDisplayButtonTemp())
+                                .foregroundColor(.primary)
+                            
+                            HStack(spacing: 8) {
+                                ForEach(1...5, id: \.self) { index in
+                                    Button(action: {
+                                        HapticManager.shared.light()
+                                        store.updateUserRating(for: restaurant.id, rating: Double(index))
+                                    }) {
+                                        Image(systemName: index <= Int(userRating) ? "star.fill" : "star")
+                                            .font(.clashDisplayHeaderTemp(size: 24))
+                                            .foregroundColor(index <= Int(userRating) ? .yellow : .gray.opacity(0.3))
+                                            .animation(.easeInOut(duration: 0.1), value: userRating)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.top, 20)
+                        
+                        // Notes Section
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Notes")
+                                .font(.clashDisplayButtonTemp())
+                                .foregroundColor(.primary)
+                            
+                            TextField("Add your notes about this spot...", text: $editableUserNotes, axis: .vertical)
+                                .textFieldStyle(.roundedBorder)
+                                .lineLimit(3...6)
+                                .font(.clashDisplayBodyTemp())
+                        }
+                        .padding(.horizontal, 30)
+                        .padding(.top, 20)
+                        
+                        // Reserve CTA Button
+                        Button(action: {
+                            // TODO: Handle reservation
+                            HapticManager.shared.medium()
+                        }) {
+                            Text("Reserve")
+                                .font(.clashDisplayButtonTemp(size: 18))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.reelEatsAccent)
+                                .cornerRadius(16)
+                        }
+                        .padding(.horizontal, 30)
+                        .padding(.top, 24)
+                        
                         
                         Spacer(minLength: 100) // Space for bottom bar
                     }
@@ -3530,10 +3609,10 @@ struct FullScreenRestaurantDetailView: View {
                 VStack(spacing: 0) {
                     Divider()
                     
-                    HStack(spacing: 16) {
-                        ActionButton(icon: "square.and.arrow.up", title: "Share") {
+                    HStack(spacing: 12) {
+                        ActionButton(icon: "calendar.badge.plus", title: "Reserve") {
                             HapticManager.shared.light()
-                            // TODO: Implement share
+                            // TODO: Make reservation
                         }
                         
                         ActionButton(icon: "location.arrow.fill", title: "Directions") {
@@ -3541,14 +3620,14 @@ struct FullScreenRestaurantDetailView: View {
                             // TODO: Open in maps
                         }
                         
-                        ActionButton(icon: "calendar.badge.plus", title: "Reserve") {
-                            HapticManager.shared.light()
-                            // TODO: Make reservation
-                        }
-                        
                         ActionButton(icon: "globe", title: "Site") {
                             HapticManager.shared.light()
                             // TODO: Open website
+                        }
+                        
+                        ActionButton(icon: "square.and.arrow.up", title: "Share") {
+                            HapticManager.shared.light()
+                            // TODO: Implement share
                         }
                     }
                     .padding(.horizontal, 20)
@@ -3563,6 +3642,18 @@ struct FullScreenRestaurantDetailView: View {
         // Simple mock logic - in real app would check actual hours
         let hour = Calendar.current.component(.hour, from: Date())
         return hour >= 8 && hour < 22
+    }
+    
+    // Helper function to get social media icon based on source
+    private func getSocialMediaIcon() -> String {
+        switch restaurant.source {
+        case .instagram:
+            return "camera.fill"
+        case .tiktok:
+            return "music.note"
+        case .web:
+            return "globe"
+        }
     }
 }
 
@@ -3604,12 +3695,12 @@ struct AddMenuOption: View {
         }) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.clashDisplayBodyTemp(size: 18))
                     .foregroundColor(.primary)
                     .frame(width: 24)
                 
                 Text(title)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.clashDisplayBodyTemp())
                     .foregroundColor(.primary)
                 
                 Spacer()
@@ -3632,13 +3723,482 @@ struct AddMenuOption: View {
 struct ModernMapView: View {
     @Binding var region: MKCoordinateRegion
     let restaurants: [Restaurant]
+    let onRestaurantTap: (Restaurant) -> Void
     
     var body: some View {
         Map(coordinateRegion: $region, annotationItems: restaurants) { restaurant in
             MapAnnotation(coordinate: CLLocationCoordinate2D(latitude: restaurant.latitude, longitude: restaurant.longitude)) {
-                RestaurantMapPin(restaurant: restaurant)
+                EmojiMapPin(restaurant: restaurant, onTap: {
+                    onRestaurantTap(restaurant)
+                })
             }
         }
+    }
+}
+
+// MARK: - Custom Emoji Map Pin
+struct EmojiMapPin: View {
+    let restaurant: Restaurant
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: {
+            HapticManager.shared.medium()
+            onTap()
+        }) {
+            ZStack {
+                // White circle background with red outline
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.reelEatsAccent, lineWidth: 2)
+                    )
+                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                
+                // Restaurant emoji
+                Text(restaurant.emoji)
+                    .font(.system(size: 18))
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Map Top Overlay
+struct MapTopOverlay: View {
+    let selectedCollection: Collection?
+    @State private var searchText = ""
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Modern search bar
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .font(.newYorkButton())
+                    .foregroundColor(.secondary)
+                
+                TextField("Search places...", text: $searchText)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .font(.newYorkBody())
+                
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.newYorkButton())
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+            )
+            .padding(.horizontal, 20)
+            
+            // Optional collection name
+            HStack {
+                if let collection = selectedCollection {
+                    Text(collection.name)
+                        .font(.poppinsCollectionNameTemp(size: 24))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color(.systemBackground))
+                                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 1)
+                        )
+                }
+                
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            
+            Spacer()
+        }
+        .padding(.top, 50)
+    }
+}
+
+// MARK: - Map Bottom Sheet View (Simplified for Compiler)
+struct MapBottomSheetView: View {
+    @Binding var selectedCollection: Collection?
+    @Binding var selectedCategory: RestaurantCategory?
+    @Binding var selectedRestaurant: Restaurant?
+    let filteredMapRestaurants: [Restaurant]
+    let bottomSheetOffset: CGFloat
+    let showingBottomSheet: Bool
+    let onDragChanged: (DragGesture.Value) -> Void
+    let onDragEnded: (DragGesture.Value) -> Void
+    @EnvironmentObject var store: RestaurantStore
+    
+    var body: some View {
+        VStack {
+            Spacer()
+            
+            VStack(spacing: 0) {
+                // Drag handle
+                ConsistentDragHandle()
+                
+                // Collection header if selected
+                if let collection = selectedCollection {
+                    collectionHeaderView(collection)
+                }
+                
+                // Main content
+                mainContentView
+                
+                
+            }
+            .background(Color(.systemBackground))
+            .cornerRadius(20, corners: [.topLeft, .topRight])
+            .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: -5)
+            .offset(y: bottomSheetOffset)
+            .gesture(
+                DragGesture()
+                    .onChanged(onDragChanged)
+                    .onEnded(onDragEnded)
+            )
+        }
+    }
+    
+    // MARK: - Computed Properties to simplify view
+    
+    private var searchBarView: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .font(.newYorkButton())
+                .foregroundColor(.secondary)
+            
+            TextField("Search places...", text: .constant(""))
+                .textFieldStyle(PlainTextFieldStyle())
+                .font(.newYorkBody())
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 16)
+    }
+    
+    private func collectionHeaderView(_ collection: Collection) -> some View {
+        HStack {
+            Text("\(filteredMapRestaurants.count) spots in collection")
+                .font(.clashDisplayButtonTemp(size: 18))
+            
+            Spacer()
+            
+            Button(action: {
+                selectedCollection = nil
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.clashDisplayHeaderTemp())
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 20)
+    }
+    
+    private var mainContentView: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                if selectedCollection != nil {
+                    restaurantListContent
+                } else {
+                    // Collections section FIRST
+                    newCollectionsContent
+                    
+                    // All Spots section SECOND  
+                    newAllSpotsContent
+                }
+            }
+            .padding(.vertical, 20)
+        }
+    }
+    
+    private var restaurantListContent: some View {
+        ForEach(filteredMapRestaurants.prefix(5), id: \.id) { restaurant in
+            RestaurantRowView(restaurant: restaurant)
+        }
+    }
+    
+    private var allSpotsContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("All Spots")
+                .font(.newYorkCollectionName(size: 20))
+                .foregroundColor(.primary)
+                .padding(.horizontal, 20)
+            
+            categoryPillsView
+        }
+    }
+    
+    private var categoryPillsView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach([RestaurantCategory.restaurants, .cafe, .bars], id: \.self) { category in
+                    CategoryPillButton(category: category, selectedCategory: $selectedCategory)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private var collectionsContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Collections")
+                .font(.newYorkCollectionName(size: 20))
+                .foregroundColor(.primary)
+                .padding(.horizontal, 20)
+            
+            ForEach(store.collections.prefix(4), id: \.id) { collection in
+                CollectionRowView(collection: collection)
+            }
+        }
+    }
+    
+    // MARK: - New Map Bottom Sheet Content
+    
+    private var newCollectionsContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Collections header with filter pills
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Collections")
+                    .font(.newYorkCollectionName(size: 20))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 20)
+                
+                // Collection filter pills (identical to home)
+                MyListsFilterBar(
+                    showingByMeDropdown: .constant(false),
+                    showingByOthersDropdown: .constant(false),
+                    collectionFilter: .constant(.byMe)
+                )
+                .environmentObject(store)
+            }
+            
+            // Horizontal scrollable collection cards
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(store.collections.prefix(6), id: \.id) { collection in
+                        MapCollectionCard(collection: collection) {
+                            selectedCollection = collection
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+    
+    private var newAllSpotsContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // All Spots header with filter pills
+            VStack(alignment: .leading, spacing: 12) {
+                Text("All Spots")
+                    .font(.newYorkCollectionName(size: 20))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 20)
+                
+                // All Spots filter pills (identical to home)
+                ModernFilterBar()
+                    .padding(.horizontal, 4) // Slight adjustment for pill alignment
+            }
+            
+            // Vertical scrollable spots with circular emoji + name
+            LazyVStack(spacing: 12) {
+                ForEach(filteredMapRestaurants.prefix(8), id: \.id) { restaurant in
+                    MapSpotRow(restaurant: restaurant) {
+                        selectedRestaurant = restaurant
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+}
+
+// MARK: - Supporting Views for MapBottomSheetView
+
+struct MapCollectionCard: View {
+    let collection: Collection
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Collection preview with sample restaurant emojis
+                HStack(spacing: -8) {
+                    ForEach(collection.restaurantIds.prefix(3), id: \.self) { restaurantId in
+                        if let restaurant = Melbourne.demoRestaurants.first(where: { $0.id == restaurantId }) {
+                            Circle()
+                                .fill(restaurant.category.color.opacity(0.2))
+                                .frame(width: 40, height: 40)
+                                .overlay(
+                                    Text(restaurant.emoji)
+                                        .font(.title3)
+                                )
+                        }
+                    }
+                    
+                    if collection.restaurantIds.count > 3 {
+                        Circle()
+                            .fill(Color(.systemGray5))
+                            .frame(width: 40, height: 40)
+                            .overlay(
+                                Text("+\(collection.restaurantIds.count - 3)")
+                                    .font(.newYorkCaption())
+                                    .foregroundColor(.secondary)
+                            )
+                    }
+                    
+                    Spacer()
+                }
+                .frame(height: 40)
+                
+                // Collection info
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(collection.name)
+                        .font(.newYorkCollectionName(size: 16))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    HStack {
+                        Text("\(collection.restaurantIds.count) spots")
+                            .font(.newYorkCaption())
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Text(collection.creatorText)
+                            .font(.newYorkCaption())
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(16)
+            .frame(width: 160)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct MapSpotRow: View {
+    let restaurant: Restaurant
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                // Circular emoji
+                Circle()
+                    .fill(restaurant.category.color.opacity(0.2))
+                    .frame(width: 44, height: 44)
+                    .overlay(
+                        Text(restaurant.emoji)
+                            .font(.title2)
+                    )
+                
+                // Restaurant name and info
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(restaurant.name)
+                        .font(.newYorkBody())
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    
+                    Text("\(restaurant.category.rawValue) • \(String(format: "%.1f", restaurant.rating))★")
+                        .font(.newYorkCaption())
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                // Distance or category icon
+                Image(systemName: restaurant.category.icon)
+                    .font(.newYorkCaption())
+                    .foregroundColor(restaurant.category.color)
+            }
+            .padding(.vertical, 8)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct RestaurantRowView: View {
+    let restaurant: Restaurant
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(restaurant.category.color.opacity(0.2))
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Text(restaurant.category.emoji)
+                        .font(.title2)
+                )
+            
+            Text(restaurant.name)
+                .font(.newYorkBody())
+            
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+    }
+}
+
+struct CategoryPillButton: View {
+    let category: RestaurantCategory
+    @Binding var selectedCategory: RestaurantCategory?
+    
+    var body: some View {
+        Button(action: {
+            HapticManager.shared.light()
+            selectedCategory = selectedCategory == category ? .all : category
+        }) {
+            Text(category.rawValue)
+                .font(.newYorkTag())
+                .foregroundColor(selectedCategory == category ? .white : .primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(selectedCategory == category ? Color.reelEatsAccent : Color.clear)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(selectedCategory == category ? Color.clear : Color(.systemGray4), lineWidth: 1)
+                )
+                .cornerRadius(20)
+        }
+    }
+}
+
+struct CollectionRowView: View {
+    let collection: Collection
+    
+    var body: some View {
+        HStack {
+            Text(collection.name)
+                .font(.newYorkBody())
+            
+            Spacer()
+            
+            Text("\(collection.restaurantIds.count) spots")
+                .font(.newYorkCaption())
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 20)
     }
 }
 
@@ -3656,7 +4216,7 @@ struct MapTabView: View {
     @State private var selectedCategory: RestaurantCategory? = .all
     @State private var selectedCollection: Collection?
     @State private var showingBottomSheet = false
-    @State private var bottomSheetOffset: CGFloat = 350
+    @State private var bottomSheetOffset: CGFloat = UIScreen.main.bounds.height * 0.7 // 30% visible
     @State private var showingProfile = false
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: -37.8136, longitude: 144.9631), // Melbourne CBD
@@ -3667,51 +4227,13 @@ struct MapTabView: View {
     var body: some View {
         ZStack {
             // Map with proper API usage
-            ModernMapView(region: $region, restaurants: filteredMapRestaurants)
+            ModernMapView(region: $region, restaurants: filteredMapRestaurants) { restaurant in
+                selectedRestaurant = restaurant
+            }
             .ignoresSafeArea()
             
-            // Top overlay with profile button and optional collection name
-            VStack {
-                HStack {
-                    if let collection = selectedCollection {
-                        Text(collection.name)
-                            .font(.poppinsCollectionNameTemp(size: 24))
-                            .foregroundColor(.primary)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color(.systemBackground))
-                            .cornerRadius(20)
-                    }
-                    
-                    Spacer()
-                    
-                    // Profile button with person icon - positioned at top right
-                    Button(action: {
-                        HapticManager.shared.light()
-                        showingProfile = true
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.blue, Color.purple, Color.cyan],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 32, height: 32)
-                            
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.white)
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 50)
-                
-                Spacer()
-            }
+            // Top overlay with optional collection name
+            MapTopOverlay(selectedCollection: selectedCollection)
             
             // Location Info Panel for selected restaurant
             if showingLocationInfo, let restaurant = selectedRestaurant {
@@ -3728,137 +4250,30 @@ struct MapTabView: View {
             }
             
             // Bottom sheet with collections and categories
-            VStack {
-                Spacer()
-                
-                // Bottom sheet
-                VStack(spacing: 0) {
-                    // Drag handle
-                    RoundedRectangle(cornerRadius: 2.5)
-                        .fill(Color(.systemGray4))
-                        .frame(width: 40, height: 5)
-                        .padding(.top, 8)
-                        .padding(.bottom, 20)
-                    
-                    // New Airbnb-style filters
-                    FilterBar(
-                        showingCuisineDropdown: .constant(false),
-                        showingDistanceDropdown: .constant(false),
-                        showingPriceDropdown: .constant(false),
-                        showingCollectionsDropdown: .constant(false)
-                    )
-                        .padding(.top, 8)
-                    .padding(.bottom, 20)
-                    
-                    // Spots in collection count
-                    if let collection = selectedCollection {
-                        HStack {
-                            Text("\(filteredMapRestaurants.count) spots in collection")
-                                .font(.system(size: 18, weight: .semibold))
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                selectedCollection = nil
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
-                    }
-                    
-                    // Restaurant list or Collections
-                    ScrollView {
-                        if selectedCollection != nil {
-                            // Show restaurants in collection
-                            VStack(spacing: 16) {
-                                ForEach(filteredMapRestaurants) { restaurant in
-                                    HStack(spacing: 12) {
-                                        // Restaurant icon
-                                        Circle()
-                                            .fill(restaurant.category.color.opacity(0.2))
-                                            .frame(width: 50, height: 50)
-                                            .overlay(
-                                                Image(systemName: restaurant.category.icon)
-                                                    .font(.system(size: 20))
-                                                    .foregroundColor(restaurant.category.color)
-                                            )
-                                        
-                                        Text(restaurant.name)
-                                            .font(.poppinsRestaurantNameTemp(size: 16))
-                                        
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 20)
-                                }
-                            }
-                            .padding(.vertical, 10)
+            MapBottomSheetView(
+                selectedCollection: $selectedCollection,
+                selectedCategory: $selectedCategory,
+                selectedRestaurant: $selectedRestaurant,
+                filteredMapRestaurants: filteredMapRestaurants,
+                bottomSheetOffset: bottomSheetOffset,
+                showingBottomSheet: showingBottomSheet,
+                onDragChanged: { value in
+                    let maxOffset = UIScreen.main.bounds.height * 0.7
+                    bottomSheetOffset = max(0, min(maxOffset, value.translation.height + (showingBottomSheet ? 0 : maxOffset)))
+                },
+                onDragEnded: { value in
+                    withAnimation(.spring()) {
+                        if value.predictedEndTranslation.height > 100 {
+                            bottomSheetOffset = UIScreen.main.bounds.height * 0.7
+                            showingBottomSheet = false
                         } else {
-                            // Show collections
-                            VStack(alignment: .leading, spacing: 20) {
-                                HStack {
-                                    Text("My Collections")
-                                        .font(.system(size: 20, weight: .bold))
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.secondary)
-                                    
-                                    Spacer()
-                                    
-                                    Button(action: {}) {
-                                        Image(systemName: "plus")
-                                            .font(.system(size: 20))
-                                            .foregroundColor(.orange)
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                                
-                                // Collections grid
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach(store.collections) { collection in
-                                            CollectionCard(collection: collection)
-                                                .frame(width: 150, height: 180)
-                                                .onTapGesture {
-                                                    HapticManager.shared.medium()
-                                                    selectedCollection = collection
-                                                }
-                                        }
-                                    }
-                                    .padding(.horizontal, 20)
-                                }
-                            }
-                            .padding(.top, 10)
+                            bottomSheetOffset = 0
+                            showingBottomSheet = true
                         }
                     }
-                    .frame(maxHeight: 300)
                 }
-                .background(Color(.systemBackground))
-                .cornerRadius(20, corners: [.topLeft, .topRight])
-                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: -5)
-                .offset(y: bottomSheetOffset)
-                .gesture(
-                    DragGesture()
-                        .onChanged { value in
-                            bottomSheetOffset = max(0, min(350, value.translation.height + (showingBottomSheet ? 0 : 350)))
-                        }
-                        .onEnded { value in
-                            withAnimation(.spring()) {
-                                if value.predictedEndTranslation.height > 100 {
-                                    bottomSheetOffset = 350
-                                    showingBottomSheet = false
-                                } else {
-                                    bottomSheetOffset = 0
-                                    showingBottomSheet = true
-                                }
-                            }
-                        }
-                )
-            }
+            )
+            .environmentObject(store)
         }
         .onAppear {
             // Start with bottom sheet partially visible
@@ -3909,6 +4324,23 @@ struct MapTabView: View {
     }
 }
 
+// MARK: - Map Collections Section
+struct MapCollectionsSection: View {
+    @EnvironmentObject var store: RestaurantStore
+    
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(store.collections) { collection in
+                    CollectionCard(collection: collection)
+                        .frame(width: 150, height: 180)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+}
+
 // MARK: - Location Info Panel (Similar to provided screenshots)
 
 struct LocationInfoPanel: View {
@@ -3935,11 +4367,7 @@ struct LocationInfoPanel: View {
                 
                 VStack(spacing: 0) {
                     // Drag handle
-                    RoundedRectangle(cornerRadius: 2.5)
-                        .fill(Color(.systemGray4))
-                        .frame(width: 40, height: 4)
-                        .padding(.top, 8)
-                        .padding(.bottom, 16)
+                    ConsistentDragHandle()
                     
                     // Content
                     ScrollView {
@@ -3960,7 +4388,7 @@ struct LocationInfoPanel: View {
                                 // Address
                                 HStack(spacing: 8) {
                                     Image(systemName: "location.fill")
-                                        .font(.system(size: 14))
+                                        .font(.clashDisplaySecondaryTemp())
                                         .foregroundColor(.secondary)
                                     
                                     Text(restaurant.address)
@@ -3975,7 +4403,7 @@ struct LocationInfoPanel: View {
                                         .frame(width: 8, height: 8)
                                     
                                     Text("Open • Closes at 10 PM")
-                                        .font(.system(size: 14, weight: .medium))
+                                        .font(.clashDisplaySecondaryTemp())
                                         .foregroundColor(.green)
                                 }
                                 
@@ -3983,11 +4411,11 @@ struct LocationInfoPanel: View {
                                 HStack(spacing: 16) {
                                     HStack(spacing: 8) {
                                         Image(systemName: userVisitStatus.icon)
-                                            .font(.system(size: 16))
+                                            .font(.clashDisplayBodyTemp())
                                             .foregroundColor(userVisitStatus == .visited ? .green : .orange)
                                         
                                         Text(userVisitStatus.rawValue)
-                                            .font(.system(size: 14, weight: .medium))
+                                            .font(.clashDisplaySecondaryTemp())
                                             .foregroundColor(.secondary)
                                     }
                                     
@@ -3995,11 +4423,11 @@ struct LocationInfoPanel: View {
                                         HStack(spacing: 4) {
                                             ForEach(1...5, id: \.self) { star in
                                                 Image(systemName: star <= Int(userRating) ? "star.fill" : "star")
-                                                    .font(.system(size: 14))
+                                                    .font(.clashDisplaySecondaryTemp())
                                                     .foregroundColor(star <= Int(userRating) ? .yellow : .gray.opacity(0.3))
                                             }
                                             Text("(\(Int(userRating))/5)")
-                                                .font(.system(size: 12))
+                                                .font(.clashDisplayCaptionTemp())
                                                 .foregroundColor(.secondary)
                                         }
                                     }
@@ -4119,11 +4547,11 @@ struct ActionButton: View {
         }) {
             VStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.clashDisplayRestaurantNameTemp(size: 20))
                     .foregroundColor(.primary)
                 
                 Text(title)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.clashDisplayCaptionTemp())
                     .foregroundColor(.primary)
             }
             .frame(maxWidth: .infinity)
@@ -4164,11 +4592,11 @@ struct MapCategoryButton: View {
                 // Modern emoji + icon combination
                 HStack(spacing: 4) {
                     Text(category.emoji)
-                        .font(.system(size: 15))
+                        .font(.newYorkSecondary(size: 15))
                     
                     if isSelected {
                         Image(systemName: category.icon)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.clashDisplayCaptionTemp(size: 11))
                             .foregroundColor(.white)
                     }
                 }
@@ -4257,22 +4685,13 @@ struct ProfileTabView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Header with settings
+                    // Header
                     HStack {
                         Text("Julian Ou")
-                            .font(.system(size: 32, weight: .bold))
+                            .font(.newYorkHeader(size: 32))
                             .foregroundColor(.primary)
                         
                         Spacer()
-                        
-                        Button(action: {
-                            HapticManager.shared.light()
-                            showingSettings = true
-                        }) {
-                            Image(systemName: "gearshape.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.primary)
-                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -4293,11 +4712,11 @@ struct ProfileTabView: View {
                         // Media saved count
                         VStack(alignment: .leading, spacing: 4) {
                             Text("\(store.savedRestaurants.count)")
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.clashDisplayCardTitleTemp())
                                 .foregroundColor(.primary)
                             
                             Text("Media Saved")
-                                .font(.system(size: 16))
+                                .font(.clashDisplayBodyTemp())
                                 .foregroundColor(.secondary)
                         }
                         
@@ -4308,7 +4727,7 @@ struct ProfileTabView: View {
                     // Edit Profile button
                     Button(action: {}) {
                         Text("Edit Profile")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.clashDisplayBodyTemp())
                             .foregroundColor(.primary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)
@@ -4317,143 +4736,63 @@ struct ProfileTabView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Help categorize section
-                    VStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Help us categorize restaurant content")
-                                .font(.system(size: 20, weight: .bold))
+                    // Settings Sections
+                    VStack(spacing: 24) {
+                        // Sharing section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Sharing")
+                                .font(.newYorkCollectionName(size: 20))
                                 .foregroundColor(.primary)
+                                .padding(.horizontal, 20)
                             
-                            Text("Add where you live, so to differentiate between travel or just local dining")
-                                .font(.system(size: 16))
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        HStack(spacing: 12) {
-                            Button("Add Home Country") {
-                                // Add home country action
+                            VStack(spacing: 12) {
+                                ModernSettingsRow(icon: "square.and.arrow.up", title: "Sharing guides", subtitle: "How to share from other apps")
                             }
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.primary)
                             .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(Color(.systemBackground))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 25)
-                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                            )
-                            .cornerRadius(25)
-                            
-                            Button("Later") {
-                                // Later action
-                            }
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.secondary)
-                            
-                            Spacer()
+                            .padding(.vertical, 16)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(16)
+                            .padding(.horizontal, 20)
                         }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 20)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(16)
-                    .padding(.horizontal, 20)
-                    
-                    // My Collections section
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("My Collections")
-                                .font(.system(size: 20, weight: .bold))
+                        
+                        // App Integration section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("App Integration")
+                                .font(.newYorkCollectionName(size: 20))
                                 .foregroundColor(.primary)
+                                .padding(.horizontal, 20)
                             
-                            Spacer()
-                            
-                            Button(action: {}) {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.secondary)
+                            VStack(spacing: 12) {
+                                ModernSettingsRow(icon: "camera.fill", title: "Instagram", subtitle: "Connected")
+                                ModernSettingsRow(icon: "music.note", title: "TikTok", subtitle: "Connected")
+                                ModernSettingsRow(icon: "safari.fill", title: "Safari", subtitle: "Connected")
                             }
-                            
-                            Button(action: {}) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 32, height: 32)
-                                    .background(Color.orange)
-                                    .clipShape(Circle())
-                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(16)
+                            .padding(.horizontal, 20)
                         }
                         
-                        if store.collections.isEmpty {
-                            HStack {
-                                Image(systemName: "folder")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
-                                
-                                Text("You have no collections yet!")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
+                        // Support section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Support")
+                                .font(.newYorkCollectionName(size: 20))
+                                .foregroundColor(.primary)
+                                .padding(.horizontal, 20)
+                            
+                            VStack(spacing: 12) {
+                                ModernSettingsRow(icon: "questionmark.circle", title: "Help & Support")
+                                ModernSettingsRow(icon: "envelope", title: "Contact Us")
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
-                        } else {
-                            // Collections grid
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
-                                ForEach(store.collections) { collection in
-                                    CollectionCard(collection: collection)
-                                }
-                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(16)
+                            .padding(.horizontal, 20)
                         }
                     }
-                    .padding(.horizontal, 20)
                     
-                    // Extracts section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Extracts")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.primary)
-                        
-                        HStack(spacing: 16) {
-                            // Spots extract
-                            VStack(spacing: 12) {
-                                Circle()
-                                    .fill(Color.blue.opacity(0.2))
-                                    .frame(width: 60, height: 60)
-                                    .overlay(
-                                        Text("📍")
-                                            .font(.system(size: 24))
-                                    )
-                                
-                                Text("Spots")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.blue)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 20)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(16)
-                            
-                            // Recipes extract
-                            VStack(spacing: 12) {
-                                Circle()
-                                    .fill(Color.orange.opacity(0.2))
-                                    .frame(width: 60, height: 60)
-                                    .overlay(
-                                        Text("📖")
-                                            .font(.system(size: 24))
-                                    )
-                                
-                                Text("Recipes")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.orange)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 20)
-                            .background(Color.orange.opacity(0.1))
-                            .cornerRadius(16)
-                        }
-                    }
-                    .padding(.horizontal, 20)
                     
                     Spacer()
                 }
@@ -4531,9 +4870,9 @@ struct SettingsView: View {
                         
                         VStack(alignment: .leading) {
                             Text("Julian Ou")
-                                .font(.system(size: 18, weight: .semibold))
+                                .font(.clashDisplayButtonTemp(size: 18))
                             Text("julian@example.com")
-                                .font(.system(size: 14))
+                                .font(.clashDisplaySecondaryTemp())
                                 .foregroundColor(.secondary)
                         }
                         
@@ -4588,17 +4927,17 @@ struct SettingsRow: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .font(.system(size: 16))
+                .font(.clashDisplayBodyTemp())
                 .foregroundColor(.blue)
                 .frame(width: 24)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 16))
+                    .font(.clashDisplayBodyTemp())
                 
                 if let subtitle = subtitle {
                     Text(subtitle)
-                        .font(.system(size: 14))
+                        .font(.clashDisplaySecondaryTemp())
                         .foregroundColor(.secondary)
                 }
             }
@@ -4609,11 +4948,1070 @@ struct SettingsRow: View {
     }
 }
 
+// MARK: - Consistent Drag Handle Component
+struct ConsistentDragHandle: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 2.5)
+            .fill(Color(.systemGray4))
+            .frame(width: 40, height: 4)
+            .padding(.top, 12)
+            .padding(.bottom, 20)
+    }
+}
+
+// MARK: - Modern Settings Row (for Profile Integration)
+struct ModernSettingsRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String?
+    
+    init(icon: String, title: String, subtitle: String? = nil) {
+        self.icon = icon
+        self.title = title
+        self.subtitle = subtitle
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Icon with accent color
+            Image(systemName: icon)
+                .font(.newYorkButton())
+                .foregroundColor(.reelEatsAccent)
+                .frame(width: 24, height: 24)
+            
+            // Content
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.newYorkBody())
+                    .foregroundColor(.primary)
+                
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(.newYorkSecondary())
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            // Chevron
+            Image(systemName: "chevron.right")
+                .font(.newYorkCaption())
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+// MARK: - ReciMe Style Action Sheet
+
+struct RecimeStyleActionSheet: View {
+    @Binding var showingAddSpotsOptions: Bool
+    @Binding var showingCreatePersonalCollection: Bool
+    @Binding var showingCreateTogetherCollection: Bool
+    
+    private func dismiss() {
+        // This will be handled by the parent view
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Handle bar only
+            ConsistentDragHandle()
+            
+            // Action buttons - all with red theme
+            VStack(spacing: 16) {
+                // Add Spots
+                ActionSheetButton(
+                    icon: "location.fill",
+                    title: "Add Spots",
+                    subtitle: "Search, upload screenshot or paste text",
+                    iconColor: .white,
+                    backgroundColor: Color.reelEatsAccent
+                ) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingAddSpotsOptions = true
+                    }
+                }
+                
+                // Create Personal Collection
+                ActionSheetButton(
+                    icon: "person.fill",
+                    title: "Create Personal Collection",
+                    subtitle: "Create a collection to your own taste",
+                    iconColor: .white,
+                    backgroundColor: Color.reelEatsAccent
+                ) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingCreatePersonalCollection = true
+                    }
+                }
+                
+                // Create Together Collection
+                ActionSheetButton(
+                    icon: "person.2.fill",
+                    title: "Create Together Collection",
+                    subtitle: "Create a collection together with friends",
+                    iconColor: .white,
+                    backgroundColor: Color.reelEatsAccent
+                ) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showingCreateTogetherCollection = true
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+            
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 24) // Much less bottom padding
+        
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: -10)
+        )
+        .padding(.horizontal, 2) // Further reduced horizontal padding to make wider
+    }
+}
+
+// MARK: - Add Spots Options View
+
+struct AddSpotsOptionsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
+    @State private var searchResults: [MockLocationResult] = []
+    @State private var isSearching = false
+    @Binding var showingUploadPhoto: Bool
+    @Binding var showingPasteText: Bool
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 16) {
+                // Handle bar
+                ConsistentDragHandle()
+                
+                HStack {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .font(.newYorkButton())
+                    .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Text("Add Spots")
+                        .font(.newYorkHeader(size: 18))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    // Invisible spacer for symmetry
+                    Text("Cancel")
+                        .opacity(0)
+                        .font(.newYorkButton())
+                }
+                .padding(.horizontal, 24)
+            }
+            .padding(.bottom, 24)
+            
+            // Search section - takes most space
+            VStack(spacing: 20) {
+                // Search bar
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                        .font(.newYorkButton())
+                    
+                    TextField("Search for restaurants, cafes, bars...", text: $searchText)
+                        .font(.newYorkBody())
+                        .textFieldStyle(PlainTextFieldStyle())
+                        .onSubmit {
+                            performSearch()
+                        }
+                    
+                    if !searchText.isEmpty {
+                        Button(action: {
+                            searchText = ""
+                            searchResults = []
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .background(Color(.systemGray6))
+                .cornerRadius(16)
+                .padding(.horizontal, 24)
+                
+                // Search results or empty state
+                if isSearching {
+                    VStack {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text("Searching...")
+                            .font(.newYorkSecondary())
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 100)
+                } else if !searchResults.isEmpty {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(searchResults) { result in
+                                CompactSearchResultRow(result: result) {
+                                    // Handle selection
+                                    dismiss()
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                    }
+                } else if !searchText.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.newYorkHeader(size: 40))
+                            .foregroundColor(.secondary.opacity(0.6))
+                        
+                        Text("No results found")
+                            .font(.newYorkBody())
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 100)
+                } else {
+                    VStack(spacing: 12) {
+                        Image(systemName: "location.magnifyingglass")
+                            .font(.newYorkHeader(size: 40))
+                            .foregroundColor(.reelEatsAccent)
+                        
+                        Text("Search for your favorite spots")
+                            .font(.newYorkBody())
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 100)
+                }
+            }
+            .frame(maxHeight: .infinity)
+            
+            // Alternative options - bottom section
+            VStack(spacing: 16) {
+                HStack(spacing: 1) {
+                    Rectangle()
+                        .fill(Color(.systemGray5))
+                        .frame(height: 1)
+                    
+                    Text("or")
+                        .font(.newYorkSecondary())
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 16)
+                    
+                    Rectangle()
+                        .fill(Color(.systemGray5))
+                        .frame(height: 1)
+                }
+                .padding(.horizontal, 24)
+                
+                // Two option buttons side by side
+                HStack(spacing: 16) {
+                    // Upload Photo button
+                    Button(action: {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showingUploadPhoto = true
+                        }
+                    }) {
+                        VStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.reelEatsAccent)
+                                    .frame(width: 44, height: 44)
+                                
+                                Image(systemName: "photo.on.rectangle")
+                                    .font(.newYorkButton(size: 16))
+                                    .foregroundColor(.white)
+                            }
+                            
+                            Text("Upload Photo")
+                                .font(.newYorkButton())
+                                .foregroundColor(.primary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(16)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    // Paste Text button
+                    Button(action: {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showingPasteText = true
+                        }
+                    }) {
+                        VStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.reelEatsAccent)
+                                    .frame(width: 44, height: 44)
+                                
+                                Image(systemName: "text.alignleft")
+                                    .font(.newYorkButton(size: 16))
+                                    .foregroundColor(.white)
+                            }
+                            
+                            Text("Paste Text")
+                                .font(.newYorkButton())
+                                .foregroundColor(.primary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(16)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                .padding(.horizontal, 24)
+            }
+            .padding(.bottom, 32)
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+    }
+    
+    private func performSearch() {
+        guard !searchText.isEmpty else { return }
+        
+        isSearching = true
+        
+        // Simulate API delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            isSearching = false
+            searchResults = MockGoogleMapsAPI.search(query: searchText)
+        }
+    }
+}
+
+// MARK: - Compact Search Result Row
+
+struct CompactSearchResultRow: View {
+    let result: MockLocationResult
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 16) {
+                // Location image or icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(result.category.color.opacity(0.2))
+                        .frame(width: 50, height: 50)
+                    
+                    Image(systemName: result.category.icon)
+                        .font(.newYorkButton())
+                        .foregroundColor(result.category.color)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(result.name)
+                        .font(.newYorkRestaurantName())
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
+                    
+                    HStack(spacing: 8) {
+                        Text(result.category.rawValue.capitalized)
+                            .font(.newYorkCaption())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(result.category.color)
+                            .cornerRadius(8)
+                        
+                        if result.rating > 0 {
+                            HStack(spacing: 2) {
+                                Image(systemName: "star.fill")
+                                    .font(.newYorkCaption())
+                                    .foregroundColor(.yellow)
+                                
+                                Text(String(format: "%.1f", result.rating))
+                                    .font(.newYorkCaption())
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    
+                    Text(result.address)
+                        .font(.newYorkCaption())
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "plus.circle.fill")
+                    .font(.newYorkButton())
+                    .foregroundColor(.reelEatsAccent)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(.systemGray5), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Collection Sharing Sheet (Spotify-style)
+
+struct CollectionSharingSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let collectionName: String
+    @State private var isAnimating = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            VStack(spacing: 16) {
+                // Handle bar
+                ConsistentDragHandle()
+                
+                HStack {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .font(.newYorkButton())
+                    .foregroundColor(.reelEatsAccent)
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+            }
+            .padding(.bottom, 32)
+            
+            // Collection preview
+            VStack(spacing: 24) {
+                // Collection artwork preview
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.reelEatsAccent, Color.reelEatsAccent.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 200, height: 200)
+                        .shadow(color: Color.reelEatsAccent.opacity(0.3), radius: 20, x: 0, y: 10)
+                        .scaleEffect(isAnimating ? 1.0 : 0.8)
+                        .animation(.spring(response: 0.8, dampingFraction: 0.7), value: isAnimating)
+                    
+                    VStack {
+                        Image(systemName: "person.2.fill")
+                            .font(.newYorkLogo(size: 32))
+                            .foregroundColor(.white)
+                        
+                        Text(collectionName.prefix(1).uppercased())
+                            .font(.newYorkLogo(size: 48))
+                            .foregroundColor(.white)
+                    }
+                    .opacity(isAnimating ? 1.0 : 0.0)
+                    .animation(.spring(response: 0.8, dampingFraction: 0.7).delay(0.2), value: isAnimating)
+                }
+                
+                VStack(spacing: 12) {
+                    Text(collectionName)
+                        .font(.newYorkCardTitle(size: 24))
+                        .foregroundColor(.primary)
+                        .opacity(isAnimating ? 1.0 : 0.0)
+                        .animation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.4), value: isAnimating)
+                    
+                    Text("Collection • Julian Ou")
+                        .font(.newYorkSecondary())
+                        .foregroundColor(.secondary)
+                        .opacity(isAnimating ? 1.0 : 0.0)
+                        .animation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.6), value: isAnimating)
+                }
+            }
+            .padding(.vertical, 32)
+            
+            // Page indicator dots
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Color.primary)
+                    .frame(width: 8, height: 8)
+                Circle()
+                    .fill(Color(.systemGray4))
+                    .frame(width: 8, height: 8)
+                Circle()
+                    .fill(Color(.systemGray4))
+                    .frame(width: 8, height: 8)
+            }
+            .padding(.bottom, 40)
+            
+            // Share options
+            HStack(spacing: 20) {
+                ShareOptionButton(icon: "link", label: "Copy link", backgroundColor: Color(.systemGray6))
+                ShareOptionButton(icon: "message.fill", label: "Message", backgroundColor: Color.blue)
+                ShareOptionButton(icon: "camera.fill", label: "Instagram", backgroundColor: LinearGradient(colors: [.pink, .orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                ShareOptionButton(icon: "square.and.arrow.up", label: "More", backgroundColor: Color(.systemGray6))
+            }
+            .padding(.horizontal, 24)
+            
+            Spacer()
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .onAppear {
+            withAnimation {
+                isAnimating = true
+            }
+        }
+    }
+}
+
+// MARK: - Share Option Button
+
+struct ShareOptionButton: View {
+    let icon: String
+    let label: String
+    let backgroundColor: AnyShapeStyle
+    
+    init(icon: String, label: String, backgroundColor: Color) {
+        self.icon = icon
+        self.label = label
+        self.backgroundColor = AnyShapeStyle(backgroundColor)
+    }
+    
+    init(icon: String, label: String, backgroundColor: LinearGradient) {
+        self.icon = icon
+        self.label = label
+        self.backgroundColor = AnyShapeStyle(backgroundColor)
+    }
+    
+    var body: some View {
+        Button(action: {
+            HapticManager.shared.light()
+            // Handle share action
+        }) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(backgroundColor)
+                        .frame(width: 60, height: 60)
+                    
+                    Image(systemName: icon)
+                        .font(.newYorkButton(size: 20))
+                        .foregroundColor(.white)
+                }
+                
+                Text(label)
+                    .font(.newYorkCaption())
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Action Sheet Button
+
+struct ActionSheetButton: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let iconColor: Color
+    let backgroundColor: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                // Icon container - smaller size
+                ZStack {
+                    Circle()
+                        .fill(backgroundColor)
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: icon)
+                        .font(.newYorkButton(size: 18))
+                        .foregroundColor(iconColor)
+                }
+                
+                // Text content - flexible width to prevent cutoff
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.newYorkRestaurantName(size: 16))
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    
+                    Text(subtitle)
+                        .font(.newYorkSecondary())
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 18)
+            .background(Color(.systemBackground))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color(.systemGray5), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Together Collection View (Extends NewCollectionView with sharing)
+
+struct TogetherCollectionView: View {
+    @EnvironmentObject var store: RestaurantStore
+    @Environment(\.dismiss) private var dismiss
+    @Binding var showingCollectionSharing: Bool
+    @Binding var createdCollectionName: String
+    
+    var body: some View {
+        NewCollectionView(isTogetherCollection: true) { collectionName in
+            // This closure is called when collection is created
+            createdCollectionName = collectionName
+            dismiss()
+            // Show sharing sheet after a brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                showingCollectionSharing = true
+            }
+        }
+        .environmentObject(store)
+    }
+}
+
+// MARK: - Import Options Sheet
+
+struct ImportOptionsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var showingImportFromGallery: Bool
+    @Binding var showingImportFromText: Bool
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 16) {
+                    Text("Import Options")
+                        .font(.newYorkHeader(size: 24))
+                        .foregroundColor(.primary)
+                    
+                    Text("Choose how you'd like to import your restaurant list")
+                        .font(.newYorkBody())
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 32)
+                
+                // Import options
+                VStack(spacing: 20) {
+                    // Import from Gallery
+                    ImportOptionCard(
+                        icon: "photo.on.rectangle",
+                        title: "Import from Gallery",
+                        subtitle: "Select screenshots of restaurant lists",
+                        iconColor: .green,
+                        backgroundColor: Color.green.opacity(0.1)
+                    ) {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showingImportFromGallery = true
+                        }
+                    }
+                    
+                    // Import from Text
+                    ImportOptionCard(
+                        icon: "text.alignleft",
+                        title: "Paste Text",
+                        subtitle: "Paste restaurant names from your notes",
+                        iconColor: .orange,
+                        backgroundColor: Color.orange.opacity(0.1)
+                    ) {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showingImportFromText = true
+                        }
+                    }
+                }
+                .padding(.horizontal, 24)
+                
+                Spacer()
+            }
+            .navigationBarItems(
+                trailing: Button("Done") { dismiss() }
+                    .font(.newYorkButton())
+                    .foregroundColor(.reelEatsAccent)
+            )
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Import Option Card
+
+struct ImportOptionCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let iconColor: Color
+    let backgroundColor: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 16) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(backgroundColor)
+                        .frame(width: 72, height: 72)
+                    
+                    Image(systemName: icon)
+                        .font(.newYorkButton(size: 28))
+                        .foregroundColor(iconColor)
+                }
+                
+                // Text
+                VStack(spacing: 8) {
+                    Text(title)
+                        .font(.newYorkCardTitle())
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.center)
+                    
+                    Text(subtitle)
+                        .font(.newYorkSecondary())
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 32)
+            .padding(.horizontal, 20)
+            .background(Color(.systemGray6))
+            .cornerRadius(20)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Import from Gallery View
+
+struct ImportFromGalleryView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var store: RestaurantStore
+    @State private var selectedImages: [UIImage] = []
+    @State private var showingImagePicker = false
+    @State private var showingProcessing = false
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                if selectedImages.isEmpty {
+                    // Empty state
+                    VStack(spacing: 24) {
+                        Spacer()
+                        
+                        VStack(spacing: 20) {
+                            Image(systemName: "photo.on.rectangle.angled")
+                                .font(.newYorkHeader(size: 64))
+                                .foregroundColor(.green)
+                            
+                            VStack(spacing: 12) {
+                                Text("Import from Photos")
+                                    .font(.newYorkCardTitle(size: 22))
+                                    .foregroundColor(.primary)
+                                
+                                Text("Select screenshots of restaurant lists from your gallery. We'll extract the restaurant names for you.")
+                                    .font(.newYorkBody())
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                        }
+                        
+                        Button(action: {
+                            showingImagePicker = true
+                        }) {
+                            Text("Select Photos")
+                                .font(.newYorkButton(size: 18))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.green)
+                                .cornerRadius(16)
+                        }
+                        .padding(.horizontal, 32)
+                        
+                        Spacer()
+                    }
+                } else {
+                    // Selected images state
+                    ScrollView {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
+                            ForEach(0..<selectedImages.count, id: \.self) { index in
+                                Image(uiImage: selectedImages[index])
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(height: 200)
+                                    .cornerRadius(12)
+                                    .clipped()
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    
+                    Button(action: {
+                        showingProcessing = true
+                        // Simulate processing
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            showingProcessing = false
+                            dismiss()
+                        }
+                    }) {
+                        HStack {
+                            if showingProcessing {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            }
+                            
+                            Text(showingProcessing ? "Processing..." : "Process Images")
+                                .font(.newYorkButton(size: 18))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(showingProcessing ? Color.gray : Color.green)
+                        .cornerRadius(16)
+                        .disabled(showingProcessing)
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+            .navigationTitle("Import from Gallery")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(
+                leading: Button("Cancel") { dismiss() }
+                    .font(.newYorkButton())
+                    .foregroundColor(.secondary),
+                trailing: selectedImages.isEmpty ? nil : Button("Add More") {
+                    showingImagePicker = true
+                }
+                .font(.newYorkButton())
+                .foregroundColor(.green)
+            )
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            // Mock image picker - in real app would use PHPickerViewController
+            MockImagePickerView(selectedImages: $selectedImages)
+        }
+    }
+}
+
+// MARK: - Mock Image Picker
+
+struct MockImagePickerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedImages: [UIImage]
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                Text("Mock Image Picker")
+                    .font(.newYorkHeader())
+                
+                Text("In a real app, this would open the photo library picker")
+                    .font(.newYorkBody())
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                
+                Button(action: {
+                    // Add mock images
+                    selectedImages = [UIImage(systemName: "photo")!]
+                    dismiss()
+                }) {
+                    Text("Add Mock Images")
+                        .font(.newYorkButton())
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.green)
+                        .cornerRadius(16)
+                }
+                .padding(.horizontal, 32)
+            }
+            .padding()
+            .navigationBarItems(
+                trailing: Button("Cancel") { dismiss() }
+            )
+        }
+    }
+}
+
+// MARK: - Import from Text View
+
+struct ImportFromTextView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var store: RestaurantStore
+    @State private var pastedText = ""
+    @State private var extractedRestaurants: [String] = []
+    @State private var showingResults = false
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                if !showingResults {
+                    // Text input state
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Paste Restaurant Names")
+                                .font(.newYorkCardTitle())
+                                .foregroundColor(.primary)
+                            
+                            Text("Paste a list of restaurant names from your notes or any text source")
+                                .font(.newYorkSecondary())
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        TextEditor(text: $pastedText)
+                            .font(.newYorkBody())
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(minHeight: 200)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(16)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(pastedText.isEmpty ? Color.clear : Color.reelEatsAccent, lineWidth: 2)
+                            )
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    if !pastedText.isEmpty {
+                        Button(action: {
+                            processText()
+                        }) {
+                            Text("Process Text")
+                                .font(.newYorkButton(size: 18))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.reelEatsAccent)
+                                .cornerRadius(16)
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                } else {
+                    // Results state
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Found Restaurants")
+                                .font(.newYorkCardTitle())
+                                .foregroundColor(.primary)
+                            
+                            Text("\(extractedRestaurants.count) restaurants found")
+                                .font(.newYorkSecondary())
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        ScrollView {
+                            LazyVStack(spacing: 12) {
+                                ForEach(extractedRestaurants, id: \.self) { restaurant in
+                                    HStack {
+                                        Text("🍽️")
+                                            .font(.newYorkButton())
+                                        
+                                        Text(restaurant)
+                                            .font(.newYorkRestaurantName())
+                                            .foregroundColor(.primary)
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.newYorkSecondary())
+                                            .foregroundColor(.green)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                        }
+                        
+                        Button(action: {
+                            // Add restaurants to saved
+                            dismiss()
+                        }) {
+                            Text("Add All to Saved")
+                                .font(.newYorkButton(size: 18))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.reelEatsAccent)
+                                .cornerRadius(16)
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                }
+                
+                Spacer()
+            }
+            .padding(.top, 20)
+            .navigationTitle("Import from Text")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(
+                leading: Button("Cancel") { dismiss() }
+                    .font(.newYorkButton())
+                    .foregroundColor(.secondary),
+                trailing: showingResults ? Button("Edit") {
+                    showingResults = false
+                }
+                .font(.newYorkButton())
+                .foregroundColor(.reelEatsAccent) : nil
+            )
+        }
+    }
+    
+    private func processText() {
+        // Simple text processing - split by lines and filter non-empty
+        let lines = pastedText.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && $0.count > 2 }
+        
+        extractedRestaurants = lines
+        showingResults = true
+    }
+}
+
 // MARK: - Custom Bottom Navigation Bar
 
 struct CustomBottomNavBar: View {
     @Binding var selectedTab: Int
     @Binding var showingAddMenu: Bool
+    @Binding var showingRecimeSheet: Bool
     let onManualSearch: () -> Void
     let onCreateCollection: () -> Void
     let onScanCollection: () -> Void
@@ -4711,21 +6109,24 @@ struct CustomBottomNavBar: View {
                         
                         Spacer()
                         
-                        // Center floating + button
+                        // Center floating + button with animation to X
                         Button(action: {
                             HapticManager.shared.light()
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                showingAddMenu.toggle()
+                            if showingRecimeSheet {
+                                showingRecimeSheet = false
+                            } else {
+                                showingRecimeSheet = true
                             }
                         }) {
-                            Image(systemName: showingAddMenu ? "xmark" : "plus")
-                                .font(.system(size: 20, weight: .bold))
+                            Image(systemName: showingRecimeSheet ? "xmark" : "plus")
+                                .font(.newYorkButton(size: 24))
                                 .foregroundColor(.white)
-                                .frame(width: 50, height: 50)
-                                .background(Color.black)
+                                .frame(width: 60, height: 60)
+                                .background(Color.reelEatsAccent)
                                 .clipShape(Circle())
-                                .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
-                                .rotationEffect(.degrees(showingAddMenu ? 45 : 0))
+                                .shadow(color: .reelEatsAccent.opacity(0.4), radius: 8, x: 0, y: 4)
+                                .rotationEffect(.degrees(showingRecimeSheet ? 90 : 0))
+                                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showingRecimeSheet)
                         }
                         .offset(y: -17)
                         
@@ -4768,8 +6169,8 @@ struct TabBarItem: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 24, weight: .medium)) // Slightly larger since no text
-                .foregroundColor(isSelected ? .black : .gray)
+                .font(.newYorkButton(size: 24)) // Slightly larger since no text
+                .foregroundColor(isSelected ? .reelEatsAccent : .gray)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -4935,7 +6336,30 @@ enum VisitStatus: String, CaseIterable {
 struct Collection: Identifiable {
     let id = UUID()
     let name: String
-    let restaurantIds: [UUID]
+    var restaurantIds: [UUID]
+    let creators: [String] // Array of creator names
+    let isCollaborative: Bool
+    
+    var creatorText: String {
+        if creators.count == 1 {
+            return creators[0]
+        } else if creators.count == 2 {
+            return "\(creators[0]) +1"
+        } else if creators.count > 2 {
+            return "\(creators[0]) +\(creators.count - 1)"
+        }
+        return ""
+    }
+    
+    var filterType: CollectionFilterType {
+        if creators.contains("Julz") && creators.count == 1 {
+            return .byMe
+        } else if creators.contains("Julz") && creators.count > 1 {
+            return .byUs
+        } else {
+            return .byOthers
+        }
+    }
 }
 
 // MARK: - Melbourne Demo Data
@@ -5245,7 +6669,7 @@ class FilterState: ObservableObject {
         id: "cuisine",
         label: "Cuisine",
         defaultText: "All Cuisine",
-        options: ["Italian", "Asian", "Mexican", "Healthy", "Pizza", "Burgers", "Cafe", "Fine Dining", "Brunch"],
+        options: ["Italian", "Asian", "Mexican", "Korean", "Chinese", "Pizza", "Burgers", "Cafe", "Fine Dining", "Brunch", "Bars", "Healthy", "Desserts", "Seafood", "BBQ"],
         multiSelect: true
     )
     
@@ -5302,6 +6726,349 @@ class FilterState: ObservableObject {
 }
 
 // Main Filter Bar Component
+// MARK: - Modern Three-Pill Filter System
+
+enum VenueType: String, CaseIterable {
+    case restaurant = "Restaurant"
+    case cafe = "Cafe"
+    case bar = "Bar"
+    case bakery = "Bakery"
+}
+
+enum ModernFilterViewState {
+    case primary
+    case secondary(VenueType)
+    
+    var categoryName: String {
+        switch self {
+        case .primary:
+            return ""
+        case .secondary(.restaurant):
+            return "Cuisine"
+        case .secondary(.cafe):
+            return "Vibes"
+        case .secondary(.bar):
+            return "Vibes"
+        case .secondary(.bakery):
+            return "Types"
+        }
+    }
+}
+
+class ModernFilterState: ObservableObject {
+    @Published var currentState: ModernFilterViewState = .primary
+    @Published var selectedVenueType: VenueType? = nil
+    @Published var showingBottomSheet = false
+    @Published var selectedOptions: Set<String> = []
+    
+    func reset() {
+        withAnimation(.easeInOut(duration: 0.4)) {
+            currentState = .primary
+            selectedVenueType = nil
+            selectedOptions.removeAll()
+        }
+    }
+    
+    func selectVenueType(_ type: VenueType) {
+        withAnimation(.easeInOut(duration: 0.4)) {
+            currentState = .secondary(type)
+            selectedVenueType = type
+        }
+    }
+    
+    func showBottomSheet() {
+        showingBottomSheet = true
+    }
+    
+    var categoryDisplayText: String {
+        guard !selectedOptions.isEmpty else { return currentState.categoryName }
+        return "\(currentState.categoryName) (\(selectedOptions.count))"
+    }
+}
+
+struct ModernFilterBar: View {
+    @StateObject private var filterState = ModernFilterState()
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            switch filterState.currentState {
+            case .primary:
+                // Primary pills
+                ForEach(VenueType.allCases, id: \.self) { venueType in
+                    ModernFilterPill(text: venueType.rawValue, style: .primary) {
+                        HapticManager.shared.light()
+                        filterState.selectVenueType(venueType)
+                    }
+                    .transition(.opacity)
+                }
+                
+            case .secondary(let selectedType):
+                // X button
+                ModernFilterPill(text: "✕", style: .reset) {
+                    HapticManager.shared.light()
+                    filterState.reset()
+                }
+                .transition(.opacity)
+                
+                // Selected venue type pill
+                ModernFilterPill(text: selectedType.rawValue, style: .selected) {
+                    // No action needed
+                }
+                .transition(.opacity)
+                
+                // Category dropdown pill
+                ModernFilterPill(text: filterState.categoryDisplayText, style: .category, hasDropdown: true) {
+                    HapticManager.shared.light()
+                    filterState.showBottomSheet()
+                }
+                .transition(.opacity)
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .sheet(isPresented: $filterState.showingBottomSheet) {
+            if let venueType = filterState.selectedVenueType {
+                CategoryBottomSheet(
+                    venueType: venueType,
+                    selectedOptions: $filterState.selectedOptions
+                )
+                .presentationDetents([.height(calculateSheetHeight(for: venueType))])
+                .presentationDragIndicator(.visible)
+            }
+        }
+    }
+    
+    private func calculateSheetHeight(for venueType: VenueType) -> CGFloat {
+        let baseHeight: CGFloat = 120 // Header + padding
+        let itemHeight: CGFloat = 72  // Each card height including spacing
+        let bottomPadding: CGFloat = 60 // Consistent bottom padding
+        
+        let itemCount = getCategoryCount(for: venueType)
+        let rows = ceil(Double(itemCount) / 2.0) // 2 columns
+        let gridHeight = CGFloat(rows) * itemHeight
+        
+        return baseHeight + gridHeight + bottomPadding
+    }
+    
+    private func getCategoryCount(for venueType: VenueType) -> Int {
+        switch venueType {
+        case .restaurant:
+            return 12 // Italian, Japanese, Mexican, Thai, Pizza, Indian, American, Mediterranean, Korean, French, Vietnamese, Middle Eastern
+        case .cafe:
+            return 10 // European, Matcha, Japanese, Plant-filled, Study-friendly, Minimalist, Industrial, Cozy, Parisian, Organic
+        case .bar:
+            return 10 // Cocktail, Dive, Rooftop, Sports, Wine, Speakeasy, Dance, Chill, Date Night, Live Music
+        case .bakery:
+            return 10 // French, Sandwiches, Japanese, Cupcakes, Donuts, Bagels, Artisan Bread, Pastries, German, Cakes
+        }
+    }
+}
+
+enum PillStyle {
+    case primary
+    case selected
+    case category
+    case reset
+}
+
+struct ModernFilterPill: View {
+    let text: String
+    let style: PillStyle
+    var hasDropdown: Bool = false
+    let action: () -> Void
+    @State private var isPressed = false
+    
+    private var backgroundColor: Color {
+        switch style {
+        case .primary:
+            return Color.clear
+        case .selected:
+            return Color.reelEatsAccent
+        case .category:
+            return Color.clear
+        case .reset:
+            return Color.clear
+        }
+    }
+    
+    private var textColor: Color {
+        switch style {
+        case .primary:
+            return .primary
+        case .selected:
+            return .white
+        case .category:
+            return .primary
+        case .reset:
+            return .primary
+        }
+    }
+    
+    var body: some View {
+        Button(action: {
+            action()
+        }) {
+            HStack(spacing: 6) {
+                Text(text)
+                    .font(.newYorkTag(size: 14))
+                    .foregroundColor(textColor)
+                
+                if hasDropdown {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(textColor)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(backgroundColor)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(style == .selected ? Color.clear : Color(.systemGray4), lineWidth: 1)
+            )
+            .cornerRadius(20)
+        }
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isPressed = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.easeInOut(duration: 0.1)) {
+                    isPressed = false
+                }
+            }
+        }
+    }
+}
+
+struct CategoryBottomSheet: View {
+    let venueType: VenueType
+    @Binding var selectedOptions: Set<String>
+    @Environment(\.dismiss) private var dismiss
+    
+    private var categoryOptions: [String] {
+        switch venueType {
+        case .restaurant:
+            return [
+                "🍝 Italian", "🍜 Japanese", "🌮 Mexican", "🍛 Thai", "🍕 Pizza",
+                "🥘 Indian", "🍔 American", "🥗 Mediterranean", "🍱 Korean", "🥖 French",
+                "🍲 Vietnamese", "🌯 Middle Eastern"
+            ]
+        case .cafe:
+            return [
+                "☕ European", "🍵 Matcha", "🌸 Japanese", "🪴 Plant-filled",
+                "📚 Study-friendly", "✨ Minimalist", "🏭 Industrial", "🧸 Cozy",
+                "🥐 Parisian", "🌿 Organic"
+            ]
+        case .bar:
+            return [
+                "🍸 Cocktail", "🍺 Dive", "🏙️ Rooftop", "📺 Sports", "🍷 Wine",
+                "🕯️ Speakeasy", "💃 Dance", "🌙 Chill", "💕 Date Night", "🎵 Live Music"
+            ]
+        case .bakery:
+            return [
+                "🥐 French", "🥪 Sandwiches", "🍡 Japanese", "🧁 Cupcakes", "🍩 Donuts",
+                "🥯 Bagels", "🍞 Artisan Bread", "🥧 Pastries", "🥨 German", "🍰 Cakes"
+            ]
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                // Header
+                HStack {
+                    Text(venueType.rawValue)
+                        .font(.newYorkHeader(size: 24))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .font(.newYorkButton())
+                    .foregroundColor(.reelEatsAccent)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                
+                // Grid of options
+                ScrollView {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+                        ForEach(categoryOptions, id: \.self) { option in
+                            CategoryCard(
+                                option: option,
+                                isSelected: selectedOptions.contains(option)
+                            ) {
+                                HapticManager.shared.light()
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    if selectedOptions.contains(option) {
+                                        selectedOptions.remove(option)
+                                    } else {
+                                        selectedOptions.insert(option)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+        }
+    }
+}
+
+struct CategoryCard: View {
+    let option: String
+    let isSelected: Bool
+    let action: () -> Void
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(option)
+                    .font(.newYorkRestaurantName(size: 16))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.leading)
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.reelEatsAccent)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? Color.reelEatsAccent.opacity(0.1) : Color(.systemGray6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isSelected ? Color.reelEatsAccent : Color.clear, lineWidth: 2)
+                    )
+            )
+        }
+        .scaleEffect(isPressed ? 1.05 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isPressed)
+        .onTapGesture {
+            withAnimation {
+                isPressed = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation {
+                    isPressed = false
+                }
+            }
+        }
+    }
+}
+
 struct FilterBar: View {
     @EnvironmentObject var filterState: FilterState
     @Binding var showingCuisineDropdown: Bool
@@ -5310,97 +7077,8 @@ struct FilterBar: View {
     @Binding var showingCollectionsDropdown: Bool
     
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    // Cuisine Filter
-                    FilterPill(
-                        text: filterState.cuisineFilter.displayText,
-                        isSelected: !filterState.cuisineFilter.selectedOptions.isEmpty,
-                        hasDropdown: true
-                    ) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            showingCuisineDropdown.toggle()
-                        }
-                    }
-                    
-                    // Distance Filter
-                    FilterPill(
-                        text: filterState.distanceFilter.displayText,
-                        isSelected: !filterState.distanceFilter.selectedOptions.isEmpty,
-                        hasDropdown: true
-                    ) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            showingDistanceDropdown.toggle()
-                        }
-                    }
-                    
-                    // Price Filter
-                    FilterPill(
-                        text: filterState.priceFilter.displayText,
-                        isSelected: !filterState.priceFilter.selectedOptions.isEmpty,
-                        hasDropdown: true
-                    ) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            showingPriceDropdown.toggle()
-                        }
-                    }
-                    
-                    // Open Now Toggle
-                    FilterPill(
-                        text: filterState.openNowFilter.label,
-                        isSelected: filterState.openNowFilter.isEnabled,
-                        hasDropdown: false
-                    ) {
-                        HapticManager.shared.light()
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            filterState.openNowFilter.isEnabled.toggle()
-                        }
-                    }
-                    
-                    // My Lists Filter
-                    FilterPill(
-                        text: filterState.collectionsFilter.displayText,
-                        isSelected: !filterState.collectionsFilter.selectedOptions.isEmpty,
-                        hasDropdown: true
-                    ) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            showingCollectionsDropdown.toggle()
-                        }
-                    }
-                    
-                    // More Filters Button
-                    FilterPill(
-                        text: "Filters",
-                        isSelected: false,
-                        hasDropdown: false,
-                        isSpecial: true
-                    ) {
-                        filterState.showingMoreFilters = true
-                    }
-                    
-                    // Clear All (only show if filters are active)
-                    if filterState.hasActiveFilters {
-                        Button(action: {
-                            HapticManager.shared.light()
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                filterState.clearAll()
-                            }
-                        }) {
-                            Text("Clear all")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.primary)
-                                .underline()
-                        }
-                        .transition(.opacity)
-                    }
-                }
-                .padding(.leading, 16)  // Add left padding to align with other content
-            }
-        }
-        .sheet(isPresented: $filterState.showingMoreFilters) {
-            MoreFiltersSheet()
-        }
+        // Replace old filter system with modern three-pill system
+        ModernFilterBar()
     }
 }
 
@@ -5420,65 +7098,32 @@ struct FilterPill: View {
     let action: () -> Void
     @State private var isPressed = false
     
-    // Clean design without emojis
-    
-    private var gradientColors: [Color] {
-        if isSelected {
-            return [Color.black.opacity(0.9), Color.black]
-        } else {
-            return [Color.white, Color.white.opacity(0.95)]
-        }
-    }
-    
     var body: some View {
         Button(action: {
             HapticManager.shared.light()
             action()
         }) {
-            HStack(spacing: 8) {
-                // Clean text without emojis
+            HStack(spacing: 6) {
+                // Clean text without emojis - updated font and style
                 Text(text)
-                    .font(.poppinsAccentTemp(size: 14))
+                    .font(.newYorkTag())
                     .foregroundColor(isSelected ? .white : .primary)
                 
                 if hasDropdown {
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.newYorkCaption())
                         .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(
-                LinearGradient(
-                    colors: gradientColors,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .clipShape(Capsule())
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isSelected ? Color.reelEatsAccent : Color.clear)
             .overlay(
-                Capsule()
-                    .stroke(
-                        isSelected ? Color.clear : Color.black.opacity(0.06),
-                        lineWidth: isSelected ? 0 : 1
-                    )
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(isSelected ? Color.clear : Color(.systemGray4), lineWidth: 1)
             )
-            .shadow(
-                color: isSelected ? .black.opacity(0.25) : .black.opacity(0.04),
-                radius: isSelected ? 8 : 2,
-                x: 0,
-                y: isSelected ? 3 : 1
-            )
-            .scaleEffect(isPressed ? 0.95 : 1.0)
+            .cornerRadius(20)
         }
-        .scaleEffect(isSelected ? 1.05 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-            withAnimation(.easeInOut(duration: 0.1)) {
-                isPressed = pressing
-            }
-        }, perform: {})
     }
 }
 
@@ -5492,7 +7137,7 @@ struct FilterDropdown: View {
             VStack(alignment: .leading, spacing: 8) {
                 // Title
                 Text(filter.label)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.clashDisplayButtonTemp(size: 18))
                     .foregroundColor(.primary)
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -5535,11 +7180,11 @@ struct FilterDropdown: View {
                         }
                     }) {
                         Text("Apply")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.clashDisplayButtonTemp())
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.black)
+                            .background(Color.reelEatsAccent)
                             .cornerRadius(12)
                     }
                     .padding(.horizontal, 20)
@@ -5580,7 +7225,7 @@ struct FilterOptionRow: View {
         }) {
             HStack {
                 Text(text)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.clashDisplayBodyTemp())
                     .foregroundColor(.primary)
                 
                 Spacer()
@@ -5588,7 +7233,7 @@ struct FilterOptionRow: View {
                 if multiSelect {
                     // Checkbox for multi-select
                     Image(systemName: isSelected ? "checkmark.square.fill" : "square")
-                        .font(.system(size: 20))
+                        .font(.clashDisplayRestaurantNameTemp(size: 20))
                         .foregroundColor(isSelected ? .black : .gray)
                 } else {
                     // Radio button for single select
@@ -5631,7 +7276,7 @@ struct MoreFiltersSheet: View {
         NavigationView {
             VStack(alignment: .leading, spacing: 24) {
                 Text("More filters coming soon!")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.clashDisplayBodyTemp(size: 18))
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 20)
                 
@@ -5652,3 +7297,244 @@ struct MoreFiltersSheet: View {
 
 
 // MARK: - My Lists Sort and Grid Toggle
+
+// MARK: - Distance Slider View
+
+struct DistanceSliderView: View {
+    @Binding var isPresented: Bool
+    @State private var distanceValue: Double = 5.0 // Default 5km
+    
+    private var distanceText: String {
+        if distanceValue <= 1 {
+            return "Walking (5min)"
+        } else if distanceValue <= 10 {
+            return "Short drive (\(Int(distanceValue))km)"
+        } else {
+            return "Anywhere"
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 16) {
+                Text(distanceText)
+                    .font(.newYorkHeader(size: 20))
+                    .foregroundColor(.primary)
+                
+                Text("\(String(format: "%.0f", distanceValue)) km radius")
+                    .font(.newYorkSecondary())
+                    .foregroundColor(.secondary)
+            }
+            .padding(.top, 8)
+            
+            // Distance slider
+            VStack(spacing: 16) {
+                Slider(value: $distanceValue, in: 0...25, step: 1) {
+                    Text("Distance")
+                } minimumValueLabel: {
+                    Text("0km")
+                        .font(.newYorkCaption())
+                        .foregroundColor(.secondary)
+                } maximumValueLabel: {
+                    Text("25km+")
+                        .font(.newYorkCaption())
+                        .foregroundColor(.secondary)
+                }
+                .accentColor(.reelEatsAccent)
+                
+                // Distance markers
+                HStack {
+                    VStack(spacing: 4) {
+                        Circle()
+                            .fill(distanceValue <= 1 ? Color.reelEatsAccent : Color.gray.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                        Text("Walking")
+                            .font(.newYorkCaption(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(spacing: 4) {
+                        Circle()
+                            .fill(distanceValue > 1 && distanceValue <= 10 ? Color.reelEatsAccent : Color.gray.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                        Text("Drive")
+                            .font(.newYorkCaption(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(spacing: 4) {
+                        Circle()
+                            .fill(distanceValue > 10 ? Color.reelEatsAccent : Color.gray.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                        Text("Anywhere")
+                            .font(.newYorkCaption(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.horizontal, 8)
+            }
+            .padding(.horizontal, 20)
+            
+            // Apply and Reset buttons
+            HStack(spacing: 12) {
+                Button(action: {
+                    distanceValue = 5.0
+                }) {
+                    Text("Reset")
+                        .font(.newYorkButton())
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                }
+                
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isPresented = false
+                    }
+                }) {
+                    Text("Apply")
+                        .font(.newYorkButton())
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.reelEatsAccent)
+                        .cornerRadius(12)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+    }
+}
+// MARK: - UberEats Style Price Selector
+
+struct UberEatsPriceSelector: View {
+    let selectedOptions: Set<String>
+    @Binding var isPresented: Bool
+    let onSelectionChange: (String) -> Void
+    
+    private let priceOptions = ["$", "$$", "$$$", "$$$$"]
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            // Horizontal price pills
+            HStack(spacing: 16) {
+                ForEach(priceOptions, id: \.self) { option in
+                    PricePill(
+                        text: option,
+                        isSelected: selectedOptions.contains(option)
+                    ) {
+                        onSelectionChange(option)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            
+            // Apply and Reset buttons
+            HStack(spacing: 12) {
+                Button(action: {
+                    // Reset all selections
+                    for option in selectedOptions {
+                        onSelectionChange(option)
+                    }
+                }) {
+                    Text("Reset")
+                        .font(.newYorkButton())
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                }
+                
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isPresented = false
+                    }
+                }) {
+                    Text("Apply")
+                        .font(.newYorkButton())
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.reelEatsAccent)
+                        .cornerRadius(12)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+    }
+}
+
+// MARK: - Price Pill Component
+
+struct PricePill: View {
+    let text: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(text)
+                .font(.newYorkButton(size: 24))
+                .foregroundColor(isSelected ? .white : .primary)
+                .frame(width: 70, height: 70)
+                .background(
+                    Circle()
+                        .fill(isSelected ? Color.black : Color(.systemGray6))
+                )
+                .overlay(
+                    Circle()
+                        .stroke(isSelected ? Color.black : Color(.systemGray4), lineWidth: isSelected ? 0 : 1)
+                )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .scaleEffect(isSelected ? 0.95 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+}
+
+
+// MARK: - Collections Sort Only (No Grid Toggle)
+struct CollectionsSortOnly: View {
+    @Binding var sortOrder: HomeTabView.MyListsSortOrder
+    @Binding var showingSortOptions: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Sort button (matching SpotifySortAndGrid style exactly)
+            Button(action: {
+                HapticManager.shared.light()
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showingSortOptions.toggle()
+                }
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.clashDisplaySecondaryTemp())
+                        .foregroundColor(.primary)
+                    
+                    Text(sortOrder.shortName)
+                        .font(.clashDisplaySecondaryTemp())
+                        .foregroundColor(.primary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            Spacer()
+            
+            // Collections are always grid view - no toggle needed
+        }
+    }
+}
+

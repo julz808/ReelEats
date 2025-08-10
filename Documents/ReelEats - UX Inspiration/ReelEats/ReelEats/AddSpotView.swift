@@ -26,7 +26,7 @@ struct AddSpotView: View {
                         Spacer()
                         
                         Text("Add Spot")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.clashDisplayButtonTemp(size: 18))
                         
                         Spacer()
                         
@@ -76,7 +76,7 @@ struct AddSpotView: View {
                             .scaleEffect(1.2)
                         
                         Text("Searching nearby spots...")
-                            .font(.system(size: 16))
+                            .font(.clashDisplayBodyTemp())
                             .foregroundColor(.secondary)
                         
                         Spacer()
@@ -87,15 +87,15 @@ struct AddSpotView: View {
                         Spacer()
                         
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 50))
+                            .font(.clashDisplayHeaderTemp(size: 50))
                             .foregroundColor(.secondary.opacity(0.5))
                         
                         Text("No spots found")
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.clashDisplayBodyTemp(size: 18))
                             .foregroundColor(.primary)
                         
                         Text("Try searching for a different location or restaurant name")
-                            .font(.system(size: 14))
+                            .font(.clashDisplaySecondaryTemp())
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 40)
@@ -109,15 +109,15 @@ struct AddSpotView: View {
                         
                         VStack(spacing: 16) {
                             Image(systemName: "location.magnifyingglass")
-                                .font(.system(size: 60))
+                                .font(.clashDisplayHeaderTemp(size: 60))
                                 .foregroundColor(.orange)
                             
                             Text("Find Your Next Spot")
-                                .font(.system(size: 22, weight: .bold))
+                                .font(.clashDisplayHeaderTemp(size: 22))
                                 .foregroundColor(.primary)
                             
                             Text("Search for restaurants, cafes, bars and more using our AI-powered search")
-                                .font(.system(size: 16))
+                                .font(.clashDisplayBodyTemp())
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
@@ -126,7 +126,7 @@ struct AddSpotView: View {
                         // Quick search suggestions
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Popular Searches")
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.clashDisplaySecondaryTemp())
                                 .foregroundColor(.secondary)
                                 .padding(.horizontal, 20)
                             
@@ -138,7 +138,7 @@ struct AddSpotView: View {
                                             performSearch()
                                         }) {
                                             Text(suggestion)
-                                                .font(.system(size: 14, weight: .medium))
+                                                .font(.clashDisplaySecondaryTemp())
                                                 .foregroundColor(.primary)
                                                 .padding(.horizontal, 16)
                                                 .padding(.vertical, 8)
@@ -218,7 +218,7 @@ struct SearchResultRow: View {
                             .fill(result.category.color.opacity(0.3))
                             .overlay(
                                 Image(systemName: result.category.icon)
-                                    .font(.system(size: 24))
+                                    .font(.clashDisplayHeaderTemp())
                                     .foregroundColor(result.category.color)
                             )
                     }
@@ -229,7 +229,7 @@ struct SearchResultRow: View {
                         .fill(result.category.color.opacity(0.3))
                         .overlay(
                             Image(systemName: result.category.icon)
-                                .font(.system(size: 24))
+                                .font(.clashDisplayHeaderTemp())
                                 .foregroundColor(result.category.color)
                         )
                         .frame(width: 60, height: 60)
@@ -238,13 +238,13 @@ struct SearchResultRow: View {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(result.name)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.clashDisplayBodyTemp())
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.leading)
                     
                     HStack(spacing: 6) {
                         Text(result.category.rawValue.capitalized)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.clashDisplayCaptionTemp())
                             .foregroundColor(.white)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
@@ -254,24 +254,24 @@ struct SearchResultRow: View {
                         if result.rating > 0 {
                             HStack(spacing: 2) {
                                 Image(systemName: "star.fill")
-                                    .font(.system(size: 10))
+                                    .font(.clashDisplayCaptionTemp(size: 10))
                                     .foregroundColor(.yellow)
                                 
                                 Text(String(format: "%.1f", result.rating))
-                                    .font(.system(size: 12))
+                                    .font(.clashDisplayCaptionTemp())
                                     .foregroundColor(.secondary)
                             }
                         }
                     }
                     
                     Text(result.address)
-                        .font(.system(size: 12))
+                        .font(.clashDisplayCaptionTemp())
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                     
                     if let distance = result.distance {
                         Text("\(String(format: "%.1f", distance)) km away")
-                            .font(.system(size: 11))
+                            .font(.clashDisplayCaptionTemp(size: 11))
                             .foregroundColor(.orange)
                     }
                 }
@@ -279,7 +279,7 @@ struct SearchResultRow: View {
                 Spacer()
                 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12))
+                    .font(.clashDisplayCaptionTemp())
                     .foregroundColor(.secondary)
             }
             .padding(.horizontal, 16)
@@ -318,7 +318,7 @@ struct AddSpotDetailView: View {
                                 .fill(location.category.color.opacity(0.3))
                                 .overlay(
                                     Image(systemName: location.category.icon)
-                                        .font(.system(size: 60))
+                                        .font(.clashDisplayHeaderTemp(size: 60))
                                         .foregroundColor(location.category.color)
                                 )
                         }
@@ -331,12 +331,12 @@ struct AddSpotDetailView: View {
                         // Title and category
                         VStack(spacing: 8) {
                             Text(location.name)
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.clashDisplayHeaderTemp())
                                 .multilineTextAlignment(.center)
                             
                             HStack(spacing: 12) {
                                 Text(location.category.rawValue.capitalized)
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.clashDisplaySecondaryTemp())
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
@@ -346,11 +346,11 @@ struct AddSpotDetailView: View {
                                 if location.rating > 0 {
                                     HStack(spacing: 4) {
                                         Image(systemName: "star.fill")
-                                            .font(.system(size: 14))
+                                            .font(.clashDisplaySecondaryTemp())
                                             .foregroundColor(.yellow)
                                         
                                         Text(String(format: "%.1f", location.rating))
-                                            .font(.system(size: 14, weight: .medium))
+                                            .font(.clashDisplaySecondaryTemp())
                                     }
                                 }
                             }
@@ -360,17 +360,17 @@ struct AddSpotDetailView: View {
                         VStack(spacing: 8) {
                             HStack(spacing: 8) {
                                 Image(systemName: "location.fill")
-                                    .font(.system(size: 14))
+                                    .font(.clashDisplaySecondaryTemp())
                                     .foregroundColor(.secondary)
                                 
                                 Text(location.address)
-                                    .font(.system(size: 14))
+                                    .font(.clashDisplaySecondaryTemp())
                                     .foregroundColor(.secondary)
                             }
                             
                             if let distance = location.distance {
                                 Text("\(String(format: "%.1f", distance)) km from your location")
-                                    .font(.system(size: 12))
+                                    .font(.clashDisplayCaptionTemp())
                                     .foregroundColor(.orange)
                             }
                         }
@@ -378,7 +378,7 @@ struct AddSpotDetailView: View {
                         // Description
                         if !location.description.isEmpty {
                             Text(location.description)
-                                .font(.system(size: 16))
+                                .font(.clashDisplayBodyTemp())
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 20)
@@ -390,10 +390,10 @@ struct AddSpotDetailView: View {
                         }) {
                             HStack {
                                 Image(systemName: "heart.fill")
-                                    .font(.system(size: 18))
+                                    .font(.clashDisplayBodyTemp(size: 18))
                                 
                                 Text("Add to Saved")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(.clashDisplayButtonTemp(size: 18))
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)

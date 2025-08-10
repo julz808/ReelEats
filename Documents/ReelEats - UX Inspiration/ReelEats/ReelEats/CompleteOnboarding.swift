@@ -61,7 +61,7 @@ struct WelcomeScreen: View {
                     Button("Skip") {
                         onSkip()
                     }
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.clashDisplayBodyTemp())
                     .foregroundColor(.gray)
                     .padding(.top, 60)
                     .padding(.trailing, 20)
@@ -82,7 +82,7 @@ struct WelcomeScreen: View {
                 VStack(spacing: 20) {
                     HStack(spacing: 6) {
                         Text("ReelEats")
-                            .font(.poppinsLogoTemp(size: 52))
+                            .font(.newYorkLogo(size: 52))
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [.primary, .primary.opacity(0.7)],
@@ -90,10 +90,11 @@ struct WelcomeScreen: View {
                                     endPoint: .trailing
                                 )
                             )
+                            .shadow(color: .primary.opacity(0.1), radius: 1, x: 0.5, y: 0.5)
                         
                         Text(".")
-                            .font(.system(size: 52, weight: .bold))
-                            .foregroundColor(.orange)
+                            .font(.newYorkLogo(size: 52))
+                            .foregroundColor(.reelEatsAccent)
                     }
                     .opacity(isAnimating ? 1.0 : 0.0)
                     .offset(y: isAnimating ? 0 : 30)
@@ -164,7 +165,7 @@ struct AuthScreen: View {
                     Button("Skip") {
                         onSkip()
                     }
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.clashDisplayBodyTemp())
                     .foregroundColor(.gray)
                     .padding(.top, 60)
                     .padding(.trailing, 20)
@@ -272,19 +273,19 @@ struct AuthButton: View {
             HStack(spacing: 16) {
                 if icon == "G" {
                     Text("G")
-                        .font(.system(size: 19, weight: .bold))
+                        .font(.clashDisplayRestaurantNameTemp(size: 19))
                         .foregroundColor(.black)
                         .frame(width: 22, height: 22)
                         .background(Color.white)
                         .clipShape(Circle())
                 } else {
                     Image(systemName: icon)
-                        .font(.system(size: 19, weight: .medium))
+                        .font(.clashDisplayBodyTemp(size: 19))
                         .foregroundColor(textColor)
                 }
                 
                 Text(title)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.clashDisplayButtonTemp(size: 18))
                     .foregroundColor(textColor)
             }
             .frame(maxWidth: .infinity)
@@ -301,16 +302,36 @@ struct AuthButton: View {
     }
 }
 
-// MARK: - Mascot Component
+// MARK: - ReelEats Logo Component (Updated from Mascot)
 
 struct MascotView: View {
     var size: CGFloat = 24
+    @State private var isGlowing = false
+    @State private var rotationAngle: Double = 0
     
     var body: some View {
-        Image("ReelEats mascot")
+        Image("ReelEats R Logo")
             .resizable()
             .aspectRatio(contentMode: .fit)
             .frame(width: size, height: size)
+            .rotationEffect(.degrees(rotationAngle))
+            .scaleEffect(isGlowing ? 1.1 : 1.0)
+            .shadow(
+                color: Color.reelEatsAccent.opacity(isGlowing ? 0.6 : 0.3), 
+                radius: isGlowing ? 15 : 8, 
+                x: 0, 
+                y: 0
+            )
+            .onAppear {
+                // Cool continuous animation
+                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                    isGlowing.toggle()
+                }
+                
+                withAnimation(.linear(duration: 8.0).repeatForever(autoreverses: false)) {
+                    rotationAngle = 360
+                }
+            }
     }
 }
 

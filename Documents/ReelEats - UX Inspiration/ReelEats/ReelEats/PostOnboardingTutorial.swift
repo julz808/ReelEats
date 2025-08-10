@@ -36,7 +36,7 @@ struct PostOnboardingTutorialCoordinator: View {
                         Button("Skip") {
                             store.completeSetup()
                         }
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.clashDisplayBodyTemp())
                         .foregroundColor(.gray)
                         .padding(.top, 60)
                         .padding(.trailing, 20)
@@ -93,7 +93,7 @@ struct TutorialScreen1: View {
                             Button("logout") {
                                 // Handle logout
                             }
-                            .font(.system(size: 16))
+                            .font(.clashDisplayBodyTemp())
                             .foregroundColor(.secondary)
                             .opacity(isAnimating ? 1.0 : 0.0)
                             .animation(.easeOut(duration: 0.6).delay(0.2), value: isAnimating)
@@ -116,7 +116,7 @@ struct TutorialScreen1: View {
                     
                     // Title text
                     Text("A simple way to save and share your favourite food spots")
-                        .font(.system(size: 36, weight: .bold))
+                        .font(.clashDisplayHeaderTemp(size: 36))
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
@@ -328,11 +328,11 @@ struct AppIntegrationSetupScreen: View {
                         VStack(spacing: 18) {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 18, weight: .medium))
+                                    .font(.clashDisplayBodyTemp(size: 18))
                                     .foregroundColor(.orange)
                                 
                                 Text("Set Up Required")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(.clashDisplayButtonTemp(size: 18))
                                     .foregroundColor(.orange)
                                 
                                 Spacer()
@@ -340,7 +340,7 @@ struct AppIntegrationSetupScreen: View {
                             
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Set up sharing content from your favourite apps")
-                                    .font(.system(size: 28, weight: .bold))
+                                    .font(.clashDisplayHeaderTemp(size: 28))
                                     .foregroundColor(.primary)
                                     .multilineTextAlignment(.leading)
                                     .lineSpacing(2)
@@ -433,7 +433,7 @@ struct TutorialScreenBase<Content: View>: View {
                     
                     // Title
                     Text(title)
-                        .font(.system(size: 36, weight: .bold))
+                        .font(.clashDisplayHeaderTemp(size: 36))
                         .foregroundColor(.primary)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
@@ -486,7 +486,7 @@ struct TutorialButton: View {
             }
         }) {
             Text(title)
-                .font(.system(size: 19, weight: .semibold))
+                .font(.clashDisplayButtonTemp(size: 19))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 60)
@@ -592,16 +592,16 @@ struct RestaurantSocialMediaPost: View {
                             .frame(width: 44, height: 44)
                             .overlay(
                                 Text("🍕")
-                                    .font(.system(size: 24))
+                                    .font(.clashDisplayHeaderTemp())
                             )
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text("melbourne_foodie")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.clashDisplayButtonTemp())
                                 .foregroundColor(.white)
                             
                             Text("Best pizza spot in the city! 🔥✨")
-                                .font(.system(size: 14))
+                                .font(.clashDisplaySecondaryTemp())
                                 .foregroundColor(.gray)
                         }
                         
@@ -610,7 +610,7 @@ struct RestaurantSocialMediaPost: View {
                         Button("Share") {
                             // Share action
                         }
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.clashDisplayBodyTemp(size: 15))
                         .foregroundColor(.blue)
                     }
                     .padding(.horizontal, 20)
@@ -632,10 +632,10 @@ struct RestaurantSocialMediaPost: View {
                         .overlay(
                             VStack {
                                 Text("🍕")
-                                    .font(.system(size: 60))
+                                    .font(.clashDisplayHeaderTemp(size: 60))
                                 
                                 Text("Margherita Paradise")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.clashDisplayButtonTemp())
                                     .foregroundColor(.white)
                             }
                         )
@@ -662,11 +662,11 @@ struct ShareDestinationIcon: View {
                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                 .overlay(
                     Text(icon)
-                        .font(.system(size: 24))
+                        .font(.clashDisplayHeaderTemp())
                 )
             
             Text(name)
-                .font(.system(size: 11, weight: .medium))
+                .font(.clashDisplayCaptionTemp(size: 11))
                 .foregroundColor(.secondary)
         }
         .scaleEffect(isAnimating ? 1.0 : 0.3)
@@ -700,10 +700,10 @@ struct MockTikTokContentExtraction: View {
                         .overlay(
                             VStack {
                                 Text("🥐")
-                                    .font(.system(size: 80))
+                                    .font(.clashDisplayHeaderTemp(size: 80))
                                 
                                 Text("Croissant Heaven")
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.clashDisplaySecondaryTemp())
                                     .foregroundColor(.white)
                             }
                         )
@@ -722,9 +722,9 @@ struct MockTikTokContentExtraction: View {
                             ], id: \.0) { icon, text, color in
                                 HStack(spacing: 6) {
                                     Text(icon)
-                                        .font(.system(size: 12))
+                                        .font(.clashDisplayCaptionTemp())
                                     Text(text)
-                                        .font(.system(size: 12, weight: .medium))
+                                        .font(.clashDisplayCaptionTemp())
                                         .foregroundColor(.white)
                                 }
                                 .padding(.horizontal, 12)
@@ -778,7 +778,7 @@ struct MockMapWithRestaurantPins: View {
                                 .frame(width: 16, height: 16)
                             
                             Text("📍 My Location")
-                                .font(.system(size: 12, weight: .medium))
+                                .font(.clashDisplayCaptionTemp())
                                 .foregroundColor(.black)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
@@ -809,11 +809,11 @@ struct MockMapWithRestaurantPins: View {
                                     .frame(width: 40, height: 40)
                                     .overlay(
                                         Text(emoji)
-                                            .font(.system(size: 20))
+                                            .font(.clashDisplayRestaurantNameTemp(size: 20))
                                     )
                                 
                                 Text(name)
-                                    .font(.system(size: 10, weight: .medium))
+                                    .font(.clashDisplayCaptionTemp(size: 10))
                                     .foregroundColor(.black)
                             }
                             .padding(12)
@@ -862,7 +862,7 @@ struct AppIntegrationHeader: View {
                             .frame(width: 44, height: 44)
                             .overlay(
                                 Image(systemName: "arrow.left")
-                                    .font(.system(size: 18, weight: .medium))
+                                    .font(.clashDisplayBodyTemp(size: 18))
                                     .foregroundColor(.black)
                             )
                             .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
@@ -923,11 +923,11 @@ struct SocialAppIntegrationRow: View {
                         Group {
                             if isCompleted {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 20, weight: .bold))
+                                    .font(.clashDisplayCardTitleTemp(size: 20))
                                     .foregroundColor(.white)
                             } else {
                                 Image(systemName: app.icon)
-                                    .font(.system(size: 22, weight: .medium))
+                                    .font(.clashDisplayBodyTemp(size: 22))
                                     .foregroundColor(app.color == .black ? .white : .white)
                             }
                         }
@@ -937,11 +937,11 @@ struct SocialAppIntegrationRow: View {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(app.name)
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.clashDisplayBodyTemp(size: 18))
                         .foregroundColor(.primary)
                     
                     Text(app.description)
-                        .font(.system(size: 14))
+                        .font(.clashDisplaySecondaryTemp())
                         .foregroundColor(.secondary)
                 }
                 
@@ -949,7 +949,7 @@ struct SocialAppIntegrationRow: View {
                 
                 if isCompleted {
                     Text("Connected")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.clashDisplaySecondaryTemp())
                         .foregroundColor(.green)
                 }
             }

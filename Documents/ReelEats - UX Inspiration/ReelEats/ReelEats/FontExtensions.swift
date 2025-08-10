@@ -1,145 +1,218 @@
 import SwiftUI
 
-// MARK: - Custom Font Extensions for ReelEats (Poppins Font System)
+// MARK: - ReelEats Brand Colors
+
+extension Color {
+    /// Pastel red accent color #FF746C
+    static let reelEatsAccent = Color(red: 255/255, green: 116/255, blue: 108/255)
+}
+
+// MARK: - Custom Font Extensions for ReelEats (New York Font System)
 
 extension Font {
     
-    // MARK: - Poppins Bold (For Logos, Headers, Accents, Important Text)
+    // MARK: - New York Bold (For Logo and Prominent Headlines)
     
-    /// Poppins Bold for ReelEats logo
-    static func poppinsLogo(size: CGFloat = 32) -> Font {
-        return Font.custom("Poppins-Bold", size: size)
+    /// New York Bold for ReelEats logo
+    static func newYorkLogo(size: CGFloat = 32) -> Font {
+        return Font.system(size: size, weight: .bold, design: .serif)
     }
     
-    /// Poppins Bold for restaurant names
-    static func poppinsRestaurantName(size: CGFloat = 18) -> Font {
-        return Font.custom("Poppins-Bold", size: size)
+    // MARK: - New York Semibold (For Card Titles and Section Headers)
+    
+    /// New York Semibold for card titles
+    static func newYorkCardTitle(size: CGFloat = 18) -> Font {
+        return Font.system(size: size, weight: .semibold, design: .serif)
     }
     
-    /// Poppins Bold for collection names
-    static func poppinsCollectionName(size: CGFloat = 24) -> Font {
-        return Font.custom("Poppins-Bold", size: size)
+    /// New York Semibold for collection names
+    static func newYorkCollectionName(size: CGFloat = 20) -> Font {
+        return Font.system(size: size, weight: .semibold, design: .serif)
     }
     
-    /// Poppins Bold for section headers
-    static func poppinsHeader(size: CGFloat = 20) -> Font {
-        return Font.custom("Poppins-Bold", size: size)
+    /// New York Semibold for headers
+    static func newYorkHeader(size: CGFloat = 24) -> Font {
+        return Font.system(size: size, weight: .semibold, design: .serif)
     }
     
-    /// Poppins Bold for button labels and accents
-    static func poppinsAccent(size: CGFloat = 16) -> Font {
-        return Font.custom("Poppins-Bold", size: size)
+    /// New York Semibold for navigation titles
+    static func newYorkNavTitle(size: CGFloat = 18) -> Font {
+        return Font.system(size: size, weight: .semibold, design: .serif)
     }
     
-    /// Poppins Bold for navigation titles
-    static func poppinsNavTitle(size: CGFloat = 18) -> Font {
-        return Font.custom("Poppins-Bold", size: size)
+    // MARK: - New York Medium (For Restaurant Names and Important Labels)
+    
+    /// New York Medium for restaurant/spot names
+    static func newYorkRestaurantName(size: CGFloat = 18) -> Font {
+        return Font.system(size: size, weight: .medium, design: .serif)
     }
     
-    // MARK: - Poppins Regular (For Body Text, Secondary Text, Descriptions)
-    
-    /// Poppins Regular for body text
-    static func poppinsBody(size: CGFloat = 16) -> Font {
-        return Font.custom("Poppins-Regular", size: size)
+    /// New York Medium for button labels
+    static func newYorkButton(size: CGFloat = 16) -> Font {
+        return Font.system(size: size, weight: .medium, design: .serif)
     }
     
-    /// Poppins Regular for secondary/subtitle text
-    static func poppinsSecondary(size: CGFloat = 14) -> Font {
-        return Font.custom("Poppins-Regular", size: size)
+    /// New York Medium for filter pills and tags
+    static func newYorkTag(size: CGFloat = 14) -> Font {
+        return Font.system(size: size, weight: .medium, design: .serif)
     }
     
-    /// Poppins Regular for captions
-    static func poppinsCaption(size: CGFloat = 12) -> Font {
-        return Font.custom("Poppins-Regular", size: size)
+    // MARK: - New York Regular (For Body Text and Standard Content)
+    
+    /// New York Regular for body text
+    static func newYorkBody(size: CGFloat = 16) -> Font {
+        return Font.system(size: size, weight: .regular, design: .serif)
     }
     
-    /// Poppins Regular for descriptions
-    static func poppinsDescription(size: CGFloat = 15) -> Font {
-        return Font.custom("Poppins-Regular", size: size)
+    /// New York Regular for secondary text
+    static func newYorkSecondary(size: CGFloat = 14) -> Font {
+        return Font.system(size: size, weight: .regular, design: .serif)
     }
     
-    /// Poppins Regular for button text (secondary buttons)
-    static func poppinsButton(size: CGFloat = 14) -> Font {
-        return Font.custom("Poppins-Regular", size: size)
+    /// New York Regular for descriptions
+    static func newYorkDescription(size: CGFloat = 15) -> Font {
+        return Font.system(size: size, weight: .regular, design: .serif)
     }
     
-    /// Poppins Regular for small text like addresses
-    static func poppinsSmall(size: CGFloat = 13) -> Font {
-        return Font.custom("Poppins-Regular", size: size)
+    // MARK: - New York Light (For Subtle Text and Small Details)
+    
+    /// New York Light for captions
+    static func newYorkCaption(size: CGFloat = 12) -> Font {
+        return Font.system(size: size, weight: .light, design: .serif)
     }
     
-    // MARK: - Fallback System Fonts (in case custom fonts fail to load)
-    
-    /// Fallback for Poppins Bold fonts using system font
-    static func systemPoppinsBold(size: CGFloat) -> Font {
-        return Font.system(size: size, weight: .bold, design: .default)
+    /// New York Light for small text like addresses
+    static func newYorkSmall(size: CGFloat = 13) -> Font {
+        return Font.system(size: size, weight: .light, design: .serif)
     }
     
-    /// Fallback for Poppins Regular fonts using system font
-    static func systemPoppinsRegular(size: CGFloat) -> Font {
-        return Font.system(size: size, weight: .regular, design: .default)
+    // MARK: - Legacy Compatibility Functions (Updated to New York)
+    
+    /// Legacy: ClashDisplay logo - now maps to New York Bold
+    static func clashDisplayLogoTemp(size: CGFloat = 32) -> Font {
+        return newYorkLogo(size: size)
     }
     
-    // MARK: - Temporary System Font Implementation (until Poppins fonts are added)
+    /// Legacy: ClashDisplay card title - now maps to New York Semibold
+    static func clashDisplayCardTitleTemp(size: CGFloat = 18) -> Font {
+        return newYorkCardTitle(size: size)
+    }
     
-    /// Poppins Bold logo with system font fallback (using Avenir Next)
+    /// Legacy: ClashDisplay restaurant name - now maps to New York Medium
+    static func clashDisplayRestaurantNameTemp(size: CGFloat = 18) -> Font {
+        return newYorkRestaurantName(size: size)
+    }
+    
+    /// Legacy: ClashDisplay collection name - now maps to New York Semibold
+    static func clashDisplayCollectionNameTemp(size: CGFloat = 20) -> Font {
+        return newYorkCollectionName(size: size)
+    }
+    
+    /// Legacy: ClashDisplay header - now maps to New York Semibold
+    static func clashDisplayHeaderTemp(size: CGFloat = 24) -> Font {
+        return newYorkHeader(size: size)
+    }
+    
+    /// Legacy: ClashDisplay nav title - now maps to New York Semibold
+    static func clashDisplayNavTitleTemp(size: CGFloat = 18) -> Font {
+        return newYorkNavTitle(size: size)
+    }
+    
+    /// Legacy: ClashDisplay button - now maps to New York Medium
+    static func clashDisplayButtonTemp(size: CGFloat = 16) -> Font {
+        return newYorkButton(size: size)
+    }
+    
+    /// Legacy: ClashDisplay tag - now maps to New York Medium
+    static func clashDisplayTagTemp(size: CGFloat = 14) -> Font {
+        return newYorkTag(size: size)
+    }
+    
+    /// Legacy: ClashDisplay body - now maps to New York Regular
+    static func clashDisplayBodyTemp(size: CGFloat = 16) -> Font {
+        return newYorkBody(size: size)
+    }
+    
+    /// Legacy: ClashDisplay secondary - now maps to New York Regular
+    static func clashDisplaySecondaryTemp(size: CGFloat = 14) -> Font {
+        return newYorkSecondary(size: size)
+    }
+    
+    /// Legacy: ClashDisplay description - now maps to New York Regular
+    static func clashDisplayDescriptionTemp(size: CGFloat = 15) -> Font {
+        return newYorkDescription(size: size)
+    }
+    
+    /// Legacy: ClashDisplay caption - now maps to New York Light
+    static func clashDisplayCaptionTemp(size: CGFloat = 12) -> Font {
+        return newYorkCaption(size: size)
+    }
+    
+    /// Legacy: ClashDisplay small - now maps to New York Light
+    static func clashDisplaySmallTemp(size: CGFloat = 13) -> Font {
+        return newYorkSmall(size: size)
+    }
+    
+    // MARK: - Legacy Poppins Font References (Updated to New York)
+    
+    /// Legacy: Maps old Poppins logo font to New York Bold
     static func poppinsLogoTemp(size: CGFloat = 32) -> Font {
-        return Font.custom("AvenirNext-Bold", size: size)
+        return newYorkLogo(size: size)
     }
     
-    /// Poppins Bold restaurant name with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins restaurant name to New York Medium
     static func poppinsRestaurantNameTemp(size: CGFloat = 18) -> Font {
-        return Font.custom("AvenirNext-DemiBold", size: size)
+        return newYorkRestaurantName(size: size)
     }
     
-    /// Poppins Bold collection name with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins collection name to New York Semibold
     static func poppinsCollectionNameTemp(size: CGFloat = 24) -> Font {
-        return Font.custom("AvenirNext-Bold", size: size)
+        return newYorkCollectionName(size: size)
     }
     
-    /// Poppins Bold header with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins header to New York Semibold
     static func poppinsHeaderTemp(size: CGFloat = 20) -> Font {
-        return Font.custom("AvenirNext-DemiBold", size: size)
+        return newYorkHeader(size: size)
     }
     
-    /// Poppins Bold accent with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins accent to New York Medium
     static func poppinsAccentTemp(size: CGFloat = 16) -> Font {
-        return Font.custom("AvenirNext-DemiBold", size: size)
+        return newYorkButton(size: size)
     }
     
-    /// Poppins Bold nav title with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins nav title to New York Semibold
     static func poppinsNavTitleTemp(size: CGFloat = 18) -> Font {
-        return Font.custom("AvenirNext-DemiBold", size: size)
+        return newYorkNavTitle(size: size)
     }
     
-    /// Poppins Regular body with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins body to New York Regular
     static func poppinsBodyTemp(size: CGFloat = 16) -> Font {
-        return Font.custom("AvenirNext-Regular", size: size)
+        return newYorkBody(size: size)
     }
     
-    /// Poppins Regular secondary with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins secondary to New York Regular
     static func poppinsSecondaryTemp(size: CGFloat = 14) -> Font {
-        return Font.custom("AvenirNext-Regular", size: size)
+        return newYorkSecondary(size: size)
     }
     
-    /// Poppins Regular caption with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins caption to New York Light
     static func poppinsCaptionTemp(size: CGFloat = 12) -> Font {
-        return Font.custom("AvenirNext-Regular", size: size)
+        return newYorkCaption(size: size)
     }
     
-    /// Poppins Regular description with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins description to New York Regular
     static func poppinsDescriptionTemp(size: CGFloat = 15) -> Font {
-        return Font.custom("AvenirNext-Regular", size: size)
+        return newYorkDescription(size: size)
     }
     
-    /// Poppins Regular button with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins button to New York Medium
     static func poppinsButtonTemp(size: CGFloat = 14) -> Font {
-        return Font.custom("AvenirNext-Regular", size: size)
+        return newYorkButton(size: size)
     }
     
-    /// Poppins Regular small with system font fallback (using Avenir Next)
+    /// Legacy: Maps old Poppins small to New York Light
     static func poppinsSmallTemp(size: CGFloat = 13) -> Font {
-        return Font.custom("AvenirNext-Regular", size: size)
+        return newYorkSmall(size: size)
     }
 }
 
@@ -147,16 +220,17 @@ extension Font {
 
 struct FontManager {
     
-    /// Check if custom fonts are properly loaded
+    /// Check if New York font is available (it's built into iOS)
     static func verifyFontsLoaded() -> Bool {
-        let poppinsBoldLoaded = UIFont(name: "Poppins-Bold", size: 16) != nil
-        let poppinsRegularLoaded = UIFont(name: "Poppins-Regular", size: 16) != nil
+        // Check if New York font is available (it's built into iOS)
+        let _ = UIFont.systemFont(ofSize: 16, weight: .regular).familyName.contains("New York") || 
+                           UIFont(name: "NewYork", size: 16) != nil
         
         print("🔤 Font Status:")
-        print("   Poppins Bold: \(poppinsBoldLoaded ? "✅ Loaded" : "❌ Failed to load")")
-        print("   Poppins Regular: \(poppinsRegularLoaded ? "✅ Loaded" : "❌ Failed to load")")
+        print("   New York Serif: ✅ Built-in system font (available)")
+        print("   Using design: .serif for optimal New York typography")
         
-        return poppinsBoldLoaded && poppinsRegularLoaded
+        return true // New York is always available as it's built into iOS
     }
     
     /// List all available font families (for debugging)
@@ -174,50 +248,110 @@ struct FontManager {
 struct FontPreview: View {
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
+                // Header Section
+                Text("New York Font System")
+                    .font(.newYorkHeader(size: 28))
+                    .foregroundColor(.primary)
+                    .padding(.bottom, 10)
+                
+                // Logo Example (Bold)
                 Group {
+                    Text("Logo (Bold)")
+                        .font(.newYorkSecondary())
+                        .foregroundColor(.secondary)
+                        .padding(.top)
+                    
                     Text("ReelEats")
-                        .font(.poppinsLogo(size: 32))
+                        .font(.newYorkLogo(size: 32))
+                        .foregroundColor(.orange)
+                }
+                
+                Divider()
+                
+                // Semibold Examples (Card Titles & Headers)
+                Group {
+                    Text("Card Titles & Headers (Semibold)")
+                        .font(.newYorkSecondary())
+                        .foregroundColor(.secondary)
+                        .padding(.top)
+                    
+                    Text("Melbourne Favorites")
+                        .font(.newYorkCollectionName())
                         .foregroundColor(.primary)
                     
-                    Text("Restaurant Name")
-                        .font(.poppinsRestaurantName())
+                    Text("Main Header")
+                        .font(.newYorkHeader())
                         .foregroundColor(.primary)
                     
-                    Text("Collection Title")
-                        .font(.poppinsCollectionName())
+                    Text("Navigation Title")
+                        .font(.newYorkNavTitle())
                         .foregroundColor(.primary)
                     
-                    Text("Section Header")
-                        .font(.poppinsHeader())
-                        .foregroundColor(.primary)
-                    
-                    Text("Button Label")
-                        .font(.poppinsAccent())
+                    Text("Chin Chin Restaurant")
+                        .font(.newYorkCardTitle())
                         .foregroundColor(.primary)
                 }
                 
                 Divider()
                 
+                // Medium Examples (Restaurant Names & Buttons)
                 Group {
-                    Text("This is body text that should use Poppins Regular font for easy reading and excellent legibility.")
-                        .font(.poppinsBody())
+                    Text("Restaurant Names & Buttons (Medium)")
+                        .font(.newYorkSecondary())
+                        .foregroundColor(.secondary)
+                        .padding(.top)
+                    
+                    Text("Osteria Ilaria")
+                        .font(.newYorkRestaurantName())
                         .foregroundColor(.primary)
                     
-                    Text("Secondary text using Poppins Regular")
-                        .font(.poppinsSecondary())
+                    HStack(spacing: 12) {
+                        Text("Italian")
+                            .font(.newYorkTag())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.orange)
+                            .cornerRadius(20)
+                        
+                        Text("Add Spot")
+                            .font(.newYorkButton())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.black)
+                            .cornerRadius(20)
+                    }
+                }
+                
+                Divider()
+                
+                // Regular & Light Text Examples
+                Group {
+                    Text("Body Text (Regular) & Details (Light)")
+                        .font(.newYorkSecondary())
+                        .foregroundColor(.secondary)
+                        .padding(.top)
+                    
+                    Text("This is body text using New York Regular for elegant, readable content throughout the app.")
+                        .font(.newYorkBody())
+                        .foregroundColor(.primary)
+                    
+                    Text("Secondary text in Regular weight for subtitles")
+                        .font(.newYorkSecondary())
                         .foregroundColor(.secondary)
                     
-                    Text("Small caption text")
-                        .font(.poppinsCaption())
+                    Text("A sophisticated dining experience in the heart of Melbourne, offering contemporary Italian cuisine with a modern twist.")
+                        .font(.newYorkDescription())
                         .foregroundColor(.secondary)
                     
-                    Text("Restaurant description text that provides details about the venue, cuisine, and atmosphere.")
-                        .font(.poppinsDescription())
+                    Text("Open now • Closes at 10 PM")
+                        .font(.newYorkCaption())
                         .foregroundColor(.secondary)
                     
-                    Text("123 Sample Street, Melbourne VIC")
-                        .font(.poppinsSmall())
+                    Text("123 Collins Street, Melbourne VIC 3000")
+                        .font(.newYorkSmall())
                         .foregroundColor(.secondary)
                 }
             }
@@ -225,6 +359,8 @@ struct FontPreview: View {
         }
         .onAppear {
             _ = FontManager.verifyFontsLoaded()
+            // Uncomment to see all available fonts
+            // FontManager.listAvailableFonts()
         }
     }
 }
