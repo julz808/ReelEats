@@ -49,7 +49,7 @@ struct HomeTabView: View {
     @State private var showingByOthersDropdown = false
     @State private var collectionsSortOrder: SortOrder = .recentlyAdded
     @State private var showingCollectionsSortOptions = false
-    @State private var collectionFilter: CollectionFilterType = .byMe
+    @State private var collectionFilter: CollectionFilterType = .all
     
     enum ContentType: String, CaseIterable {
         case spots = "All Spots"
@@ -1194,7 +1194,7 @@ struct CollectionsEmbeddedContent: View {
     @Binding var selectedCollection: Collection?
     let onRestaurantSelect: (Restaurant) -> Void
     var isListView: Bool = false
-    var collectionFilter: CollectionFilterType = .byMe
+    var collectionFilter: CollectionFilterType = .all
     @EnvironmentObject var store: RestaurantStore
     
     private var filteredCollections: [Collection] {
@@ -1446,7 +1446,7 @@ struct SavedTabView: View {
     @State private var showingSortOptions = false
     // Grid/List toggle removed - using dedicated views for All Spots (list) and Collections (grid)
     @State private var showingRestaurantDetail = false
-    @State private var collectionFilter: CollectionFilterType = .byMe
+    @State private var collectionFilter: CollectionFilterType = .all
     // Collections always use grid view
     
     
@@ -2819,9 +2819,8 @@ struct CollectionAlbumCard: View {
         Color.pink.opacity(0.8)
     ]
     
-    private var isCollaborative: Bool {
-        collection.name.contains("date night") || collection.name.contains("road trip")
-    }
+    // Collaborative visuals removed per request
+    private var isCollaborative: Bool { false }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -2837,18 +2836,7 @@ struct CollectionAlbumCard: View {
                 .aspectRatio(1.0, contentMode: .fit)
                 .overlay(
                     VStack {
-                        // Collaborative indicator at top
-                        if isCollaborative {
-                            HStack {
-                                Spacer()
-                                CollaboratorAvatars()
-                                    .padding(.trailing, 12)
-                                    .padding(.top, 12)
-                            }
-                        }
-                        
                         Spacer()
-                        
                         Text(collection.name.lowercased())
                             .font(.poppinsCollectionNameTemp(size: 18))
                             .foregroundColor(.white)
@@ -2943,14 +2931,14 @@ struct RestaurantListCard: View {
             )
             .overlay(
                 Text(restaurant.emoji)
-                    .font(.clashDisplayHeaderTemp(size: 32))
+                    .font(.clashDisplayHeaderTemp(size: 30))
             )
             .onAppear {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     imageLoaded = true
                 }
             }
-            .frame(width: 60, height: 60) // Reduced from 80x80 to 60x60
+            .frame(width: 52, height: 52)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             
             // Restaurant info - more space for text
@@ -2983,16 +2971,13 @@ struct RestaurantListCard: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                 
-                // Location
-                Text(locationDisplay)
-                    .font(.clashDisplaySmallTemp())
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                
-                // Collection indicator: red tick if in collection, grey + if not
+                // Location + collection indicator inline
                 HStack {
+                    Text(locationDisplay)
+                        .font(.clashDisplaySmallTemp())
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
                     Spacer()
-                    
                     Button(action: {
                         HapticManager.shared.light()
                         if isInCollection {
@@ -3010,15 +2995,15 @@ struct RestaurantListCard: View {
                                     .foregroundColor(.gray.opacity(0.6))
                             }
                         }
-                        .font(.clashDisplayBodyTemp(size: 18))
+                        .font(.clashDisplayBodyTemp(size: 16))
                     }
                 }
-                .padding(.top, 2)
             }
             
             Spacer()
         }
-        .padding(16)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
@@ -3851,6 +3836,7 @@ struct MapBottomSheetView: View {
     let onDragChanged: (DragGesture.Value) -> Void
     let onDragEnded: (DragGesture.Value) -> Void
     @EnvironmentObject var store: RestaurantStore
+    @State private var searchText: String = ""
     
     var body: some View {
         VStack {
@@ -3860,15 +3846,16 @@ struct MapBottomSheetView: View {
                 // Drag handle
                 ConsistentDragHandle()
                 
-                // Collection header if selected
-                if let collection = selectedCollection {
-                    collectionHeaderView(collection)
+                // Show content depending on whether a restaurant is selected
+                if selectedRestaurant != nil {
+                    detailContentView
+                } else {
+                    // Optional collection header if user selected a collection
+                    if let collection = selectedCollection {
+                        collectionHeaderView(collection)
+                    }
+                    mainContentView
                 }
-                
-                // Main content
-                mainContentView
-                
-                
             }
             .background(Color(.systemBackground))
             .cornerRadius(20, corners: [.topLeft, .topRight])
@@ -3890,7 +3877,7 @@ struct MapBottomSheetView: View {
                 .font(.newYorkButton())
                 .foregroundColor(.secondary)
             
-            TextField("Search places...", text: .constant(""))
+            TextField("Search places...", text: $searchText)
                 .textFieldStyle(PlainTextFieldStyle())
                 .font(.newYorkBody())
         }
@@ -3924,15 +3911,11 @@ struct MapBottomSheetView: View {
     private var mainContentView: some View {
         ScrollView {
             VStack(spacing: 24) {
-                if selectedCollection != nil {
-                    restaurantListContent
-                } else {
-                    // Collections section FIRST
-                    newCollectionsContent
-                    
-                    // All Spots section SECOND  
-                    newAllSpotsContent
-                }
+                // First element in sheet: search bar
+                searchBarView
+                
+                if selectedCollection != nil { restaurantListContent }
+                else { newCollectionsContent; newAllSpotsContent }
             }
             .padding(.vertical, 20)
         }
@@ -4040,6 +4023,30 @@ struct MapBottomSheetView: View {
             }
             .padding(.horizontal, 20)
         }
+    }
+    
+    private var detailContentView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Button(action: { withAnimation { selectedRestaurant = nil } }) {
+                    Image(systemName: "chevron.left")
+                        .font(.newYorkButton())
+                        .foregroundColor(.primary)
+                }
+                Text("Spot Details")
+                    .font(.newYorkCollectionName(size: 18))
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            
+            if let restaurant = selectedRestaurant {
+                // Reuse the list card look for detail header
+                RestaurantListCard(restaurant: restaurant)
+                    .environmentObject(store)
+                    .padding(.horizontal, 16)
+            }
+        }
+        .padding(.vertical, 20)
     }
 }
 
@@ -4233,14 +4240,14 @@ struct MapTabView: View {
     @State private var selectedCollection: Collection?
     @State private var showingBottomSheet = false
     @State private var bottomSheetOffset: CGFloat = UIScreen.main.bounds.height * 0.7 // 30% visible by default
+    @State private var dragStartOffset: CGFloat = 0
+    @State private var isDraggingSheet = false
     @State private var showingProfile = false
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: -37.8136, longitude: 144.9631), // Melbourne CBD
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
     @State private var showingLocationInfo = false
-    @State private var dragStartOffset: CGFloat = 0
-    @State private var isDraggingSheet = false
     
     enum BottomSheetLevel: CaseIterable {
         case ten, thirty, fifty, ninety
@@ -4269,7 +4276,7 @@ struct MapTabView: View {
             VStack {
                 Spacer()
                 HStack(spacing: 12) {
-                    // Location circular filter (no-op placeholder)
+                    // Location circular filter
                     Button(action: {}) {
                         Image(systemName: "location.circle.fill")
                             .font(.title3)
@@ -4277,9 +4284,10 @@ struct MapTabView: View {
                             .frame(width: 36, height: 36)
                             .background(Color.reelEatsAccent)
                             .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                     }
                     
-                    ForEach([RestaurantCategory.restaurants, .cafe, .bars, .desserts], id: \.self) { category in
+                    ForEach([RestaurantCategory.restaurants, .cafe, .bars, .bakery], id: \ .self) { category in
                         Button(action: { selectedCategory = selectedCategory == category ? .all : category }) {
                             HStack(spacing: 8) {
                                 Text(category.rawValue)
@@ -4299,7 +4307,7 @@ struct MapTabView: View {
                 .padding(.bottom, offset(for: .thirty) - bottomSheetOffset + 12)
             }
             
-            // Bottom sheet with collections and categories
+            // Bottom sheet
             MapBottomSheetView(
                 selectedCollection: $selectedCollection,
                 selectedCategory: $selectedCategory,
@@ -4315,7 +4323,6 @@ struct MapTabView: View {
                 onDragEnded: { value in
                     withAnimation(.spring()) {
                         isDraggingSheet = false
-                        // Snap to nearest state among 10%, 30%, 50%, 90%
                         let nearest = snapOffsets.min(by: { abs($0 - bottomSheetOffset) < abs($1 - bottomSheetOffset) }) ?? bottomSheetOffset
                         bottomSheetOffset = nearest
                         showingBottomSheet = nearest <= offset(for: .fifty)
@@ -4325,12 +4332,10 @@ struct MapTabView: View {
             .environmentObject(store)
         }
         .onAppear {
-            // Ensure we start with only 30% visible
             bottomSheetOffset = offset(for: .thirty)
         }
         .onChange(of: selectedRestaurant) { _, newRestaurant in
             if let restaurant = newRestaurant {
-                // Zoom to selected restaurant location
                 withAnimation(.easeInOut(duration: 1.0)) {
                     region = MKCoordinateRegion(
                         center: CLLocationCoordinate2D(
@@ -4340,19 +4345,7 @@ struct MapTabView: View {
                         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
                     )
                 }
-                
-                // Show location info panel
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                        showingLocationInfo = true
-                    }
-                }
             }
-        }
-        // Show the same detail modal as Home when a spot is tapped
-        .sheet(item: $selectedRestaurant) { restaurant in
-            FullScreenRestaurantDetailView(restaurant: restaurant)
-                .environmentObject(store)
         }
         .sheet(isPresented: $showingProfile) {
             ProfileTabView()
@@ -6236,6 +6229,7 @@ enum RestaurantCategory: String, CaseIterable {
     case restaurants = "Restaurants"
     case cafe = "Cafe"
     case bars = "Bars"
+    case bakery = "Bakery"
     case desserts = "Desserts"
     case fastfood = "Fast Food"
     case finedining = "Fine Dining"
@@ -6246,6 +6240,7 @@ enum RestaurantCategory: String, CaseIterable {
         case .restaurants: return "fork.knife"
         case .cafe: return "cup.and.saucer.fill"
         case .bars: return "wineglass.fill"
+        case .bakery: return "bag.fill"
         case .desserts: return "birthday.cake.fill"
         case .fastfood: return "takeoutbag.and.cup.and.straw.fill"
         case .finedining: return "flame.fill"
@@ -6258,9 +6253,10 @@ enum RestaurantCategory: String, CaseIterable {
         case .restaurants: return "🍝"
         case .cafe: return "☕"
         case .bars: return "🍸"
-        case .desserts: return "🧁"
+        case .bakery: return "🥐"
+        case .desserts: return "🍰"
         case .fastfood: return "🍔"
-        case .finedining: return "🥂"
+        case .finedining: return "🍷"
         }
     }
     
