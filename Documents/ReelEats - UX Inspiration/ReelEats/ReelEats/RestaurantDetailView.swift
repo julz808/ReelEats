@@ -136,23 +136,19 @@ struct RestaurantDetailView: View {
                                 
                                 // Reserve Action Button (moved from four-button row)
                                 Button(action: {
-                                    HapticManager.shared.light()
+                                    // Reserve CTA moved here above rating
+                                    HapticManager.shared.medium()
                                 }) {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "calendar.badge.plus")
-                                            .font(.clashDisplayBodyTemp(size: 18))
-                                            .foregroundColor(.primary)
-                                        
-                                        Text("Reserve")
-                                            .font(.clashDisplaySecondaryTemp())
-                                            .foregroundColor(.primary)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(20)
+                                    Text("Reserve")
+                                        .font(.clashDisplayButtonTemp(size: 18))
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 16)
+                                        .background(Color.reelEatsAccent)
+                                        .cornerRadius(16)
                                 }
-                                .padding(.top, 12)
+                                .padding(.horizontal, 30)
+                                .padding(.top, 16)
                                 
                                 // User Rating Section
                                 VStack(spacing: 12) {
@@ -179,18 +175,21 @@ struct RestaurantDetailView: View {
                                 .padding(.horizontal, 30)
                                 .padding(.top, 20)
                                 
-                                // Reserve CTA Button
+                                // View Original Post moved to bottom (swap with Reserve)
                                 Button(action: {
-                                    // TODO: Handle reservation
-                                    HapticManager.shared.medium()
+                                    HapticManager.shared.light()
                                 }) {
-                                    Text("Reserve")
-                                        .font(.clashDisplayButtonTemp(size: 18))
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 16)
-                                        .background(Color.reelEatsAccent)
-                                        .cornerRadius(16)
+                                    HStack(spacing: 8) {
+                                        Image(systemName: getSocialMediaIcon())
+                                            .font(.clashDisplayBodyTemp(size: 18))
+                                        Text("View original post")
+                                            .font(.clashDisplaySecondaryTemp())
+                                    }
+                                    .foregroundColor(.primary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(20)
                                 }
                                 .padding(.horizontal, 30)
                                 .padding(.top, 24)
@@ -259,7 +258,7 @@ struct RestaurantDetailView: View {
                                             HapticManager.shared.light()
                                         }) {
                                             VStack(spacing: 6) {
-                                                Image(systemName: "location.fill")
+                                                Image(systemName: "location.north.circle.fill")
                                                     .font(.clashDisplayBodyTemp(size: 18))
                                                 Text("Directions")
                                                     .font(.clashDisplayCaptionTemp(size: 11))

@@ -3613,7 +3613,7 @@ struct FullScreenRestaurantDetailView: View {
                             // TODO: Make reservation
                         }
                         
-                        ActionButton(icon: "location.arrow.fill", title: "Directions") {
+                        ActionButton(icon: "location.north.circle.fill", title: "Directions") {
                             HapticManager.shared.light()
                             // TODO: Open in maps
                         }
@@ -4287,13 +4287,15 @@ struct MapTabView: View {
                             .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
                     }
                     
-                    ForEach([RestaurantCategory.restaurants, .cafe, .bars, .bakery], id: \ .self) { category in
+                    ForEach([RestaurantCategory.restaurants, .cafe, .bars, .bakery], id: \.self) { category in
                         Button(action: { selectedCategory = selectedCategory == category ? .all : category }) {
                             HStack(spacing: 8) {
                                 Text(category.rawValue)
                                     .font(.newYorkTag())
+                                    .lineLimit(1)
+                                    .fixedSize(horizontal: true, vertical: false)
                             }
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, category == .restaurants ? 16 : 12)
                             .padding(.vertical, 8)
                             .background(selectedCategory == category ? Color.reelEatsAccent : Color(.systemBackground))
                             .foregroundColor(selectedCategory == category ? .white : .primary)
@@ -4304,7 +4306,8 @@ struct MapTabView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, offset(for: .thirty) - bottomSheetOffset + 12)
+                // Keep pills hugging the sheet with a tiny gap and track movement
+                .padding(.bottom, max(6, offset(for: .thirty) - bottomSheetOffset + 6))
             }
             
             // Bottom sheet
@@ -4318,13 +4321,13 @@ struct MapTabView: View {
                 onDragChanged: { value in
                     let maxOffset = offset(for: .ten) // lowest position where handle still shows
                     if !isDraggingSheet { isDraggingSheet = true; dragStartOffset = bottomSheetOffset }
-                    bottomSheetOffset = max(0, min(maxOffset, dragStartOffset + value.translation.height))
+                    bottomSheetOffset = max(offset(for: .ten), min(offset(for: .ninety), dragStartOffset + value.translation.height))
                 },
                 onDragEnded: { value in
                     withAnimation(.spring()) {
                         isDraggingSheet = false
                         let nearest = snapOffsets.min(by: { abs($0 - bottomSheetOffset) < abs($1 - bottomSheetOffset) }) ?? bottomSheetOffset
-                        bottomSheetOffset = nearest
+                        bottomSheetOffset = max(offset(for: .ten), min(offset(for: .ninety), nearest))
                         showingBottomSheet = nearest <= offset(for: .fifty)
                     }
                 }
@@ -4551,7 +4554,7 @@ struct BottomActionPanel: View {
             )
             
             ActionButton(
-                icon: "location.fill",
+                icon: "location.north.circle.fill",
                 title: "Directions",
                 action: { /* Directions action */ }
             )
@@ -6266,6 +6269,7 @@ enum RestaurantCategory: String, CaseIterable {
         case .restaurants: return Color(red: 0.2, green: 0.6, blue: 1.0)
         case .cafe: return Color(red: 0.8, green: 0.5, blue: 0.2)
         case .bars: return Color(red: 0.7, green: 0.3, blue: 0.9)
+        case .bakery: return Color(red: 0.92, green: 0.78, blue: 0.48)
         case .desserts: return Color(red: 1.0, green: 0.4, blue: 0.8)
         case .fastfood: return Color(red: 1.0, green: 0.6, blue: 0.2)
         case .finedining: return Color(red: 0.8, green: 0.7, blue: 0.2)
@@ -6278,6 +6282,7 @@ enum RestaurantCategory: String, CaseIterable {
         case .restaurants: return [Color(red: 0.3, green: 0.7, blue: 1.0), Color(red: 0.1, green: 0.5, blue: 0.9)]
         case .cafe: return [Color(red: 0.9, green: 0.6, blue: 0.3), Color(red: 0.7, green: 0.4, blue: 0.1)]
         case .bars: return [Color(red: 0.8, green: 0.4, blue: 1.0), Color(red: 0.6, green: 0.2, blue: 0.8)]
+        case .bakery: return [Color(red: 0.96, green: 0.86, blue: 0.60), Color(red: 0.88, green: 0.72, blue: 0.40)]
         case .desserts: return [Color(red: 1.0, green: 0.5, blue: 0.9), Color(red: 0.9, green: 0.3, blue: 0.7)]
         case .fastfood: return [Color(red: 1.0, green: 0.7, blue: 0.3), Color(red: 0.9, green: 0.5, blue: 0.1)]
         case .finedining: return [Color(red: 0.9, green: 0.8, blue: 0.3), Color(red: 0.7, green: 0.6, blue: 0.1)]

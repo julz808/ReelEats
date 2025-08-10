@@ -74,12 +74,11 @@ struct WelcomeScreen: View {
                 
                 // Animated ReelEats R Logo above the title
                 Group {
-                    if UIImage(named: "ReelEats R Logo") != nil {
-                        Image("ReelEats R Logo")
+                    if let uiImage = UIImage(named: "ReelEats R Logo") ?? UIImage(contentsOfFile: Bundle.main.path(forResource: "ReelEats R Logo", ofType: "png") ?? "") {
+                        Image(uiImage: uiImage)
                             .resizable()
                             .scaledToFit()
                     } else {
-                        // Fallback to mascot if asset name not found
                         MascotView(size: 120)
                     }
                 }
