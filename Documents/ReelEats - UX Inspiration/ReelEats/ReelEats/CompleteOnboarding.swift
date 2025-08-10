@@ -73,14 +73,21 @@ struct WelcomeScreen: View {
                 Spacer()
                 
                 // Animated ReelEats R Logo above the title
-                Image("ReelEats R Logo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 120, height: 120)
-                    .scaleEffect(isAnimating ? 1.0 : 0.6)
-                    .rotationEffect(.degrees(isAnimating ? 0 : -10))
-                    .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
-                    .animation(.spring(response: 1.0, dampingFraction: 0.65), value: isAnimating)
+                Group {
+                    if UIImage(named: "ReelEats R Logo") != nil {
+                        Image("ReelEats R Logo")
+                            .resizable()
+                            .scaledToFit()
+                    } else {
+                        // Fallback to mascot if asset name not found
+                        MascotView(size: 120)
+                    }
+                }
+                .frame(width: 120, height: 120)
+                .scaleEffect(isAnimating ? 1.0 : 0.6)
+                .rotationEffect(.degrees(isAnimating ? 0 : -10))
+                .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+                .animation(.spring(response: 1.0, dampingFraction: 0.65), value: isAnimating)
                 
                 // Brand name with gradient
                 VStack(spacing: 20) {

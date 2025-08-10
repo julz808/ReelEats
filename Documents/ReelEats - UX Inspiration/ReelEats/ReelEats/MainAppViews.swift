@@ -3997,7 +3997,7 @@ struct MapBottomSheetView: View {
                 MyListsFilterBar(
                     showingByMeDropdown: .constant(false),
                     showingByOthersDropdown: .constant(false),
-                    collectionFilter: .constant(.byMe)
+                    collectionFilter: .constant(.all)
                 )
                 .environmentObject(store)
             }
@@ -4239,6 +4239,23 @@ struct MapTabView: View {
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
     @State private var showingLocationInfo = false
+    @State private var dragStartOffset: CGFloat = 0
+    @State private var isDraggingSheet = false
+    
+    enum BottomSheetLevel: CaseIterable {
+        case ten, thirty, fifty, ninety
+        var visible: CGFloat {
+            switch self { case .ten: return 0.10; case .thirty: return 0.30; case .fifty: return 0.50; case .ninety: return 0.90 }
+        }
+    }
+    
+    private func offset(for level: BottomSheetLevel) -> CGFloat {
+        UIScreen.main.bounds.height * (1 - level.visible)
+    }
+    
+    private var snapOffsets: [CGFloat] {
+        [offset(for: .ten), offset(for: .thirty), offset(for: .fifty), offset(for: .ninety)]
+    }
     
     var body: some View {
         ZStack {
@@ -4260,18 +4277,17 @@ struct MapTabView: View {
                 bottomSheetOffset: bottomSheetOffset,
                 showingBottomSheet: showingBottomSheet,
                 onDragChanged: { value in
-                    let maxOffset = UIScreen.main.bounds.height * 0.7
-                    bottomSheetOffset = max(0, min(maxOffset, value.translation.height + (showingBottomSheet ? 0 : maxOffset)))
+                    let maxOffset = offset(for: .ten)
+                    if !isDraggingSheet { isDraggingSheet = true; dragStartOffset = bottomSheetOffset }
+                    bottomSheetOffset = max(0, min(maxOffset, dragStartOffset + value.translation.height))
                 },
                 onDragEnded: { value in
                     withAnimation(.spring()) {
-                        if value.predictedEndTranslation.height > 100 {
-                            bottomSheetOffset = UIScreen.main.bounds.height * 0.7
-                            showingBottomSheet = false
-                        } else {
-                            bottomSheetOffset = 0
-                            showingBottomSheet = true
-                        }
+                        isDraggingSheet = false
+                        // Snap to nearest state among 10%, 30%, 50%, 90%
+                        let nearest = snapOffsets.min(by: { abs($0 - bottomSheetOffset) < abs($1 - bottomSheetOffset) }) ?? bottomSheetOffset
+                        bottomSheetOffset = nearest
+                        showingBottomSheet = nearest <= offset(for: .fifty)
                     }
                 }
             )
@@ -4279,7 +4295,7 @@ struct MapTabView: View {
         }
         .onAppear {
             // Ensure we start with only 30% visible
-            bottomSheetOffset = UIScreen.main.bounds.height * 0.7
+            bottomSheetOffset = offset(for: .thirty)
         }
         .onChange(of: selectedRestaurant) { _, newRestaurant in
             if let restaurant = newRestaurant {
