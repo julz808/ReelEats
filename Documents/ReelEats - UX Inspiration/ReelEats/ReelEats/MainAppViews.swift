@@ -4265,8 +4265,39 @@ struct MapTabView: View {
             }
             .ignoresSafeArea()
             
-            // Top overlay with optional collection name (search moved into bottom sheet)
-            MapTopOverlay(selectedCollection: selectedCollection)
+            // Floating category filters just above bottom sheet
+            VStack {
+                Spacer()
+                HStack(spacing: 12) {
+                    // Location circular filter (no-op placeholder)
+                    Button(action: {}) {
+                        Image(systemName: "location.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.white)
+                            .frame(width: 36, height: 36)
+                            .background(Color.reelEatsAccent)
+                            .clipShape(Circle())
+                    }
+                    
+                    ForEach([RestaurantCategory.restaurants, .cafe, .bars, .desserts], id: \.self) { category in
+                        Button(action: { selectedCategory = selectedCategory == category ? .all : category }) {
+                            HStack(spacing: 8) {
+                                Text(category.rawValue)
+                                    .font(.newYorkTag())
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(selectedCategory == category ? Color.reelEatsAccent : Color(.systemBackground))
+                            .foregroundColor(selectedCategory == category ? .white : .primary)
+                            .clipShape(Capsule())
+                            .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
+                        }
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, offset(for: .thirty) - bottomSheetOffset + 12)
+            }
             
             // Bottom sheet with collections and categories
             MapBottomSheetView(
@@ -4277,7 +4308,7 @@ struct MapTabView: View {
                 bottomSheetOffset: bottomSheetOffset,
                 showingBottomSheet: showingBottomSheet,
                 onDragChanged: { value in
-                    let maxOffset = offset(for: .ten)
+                    let maxOffset = offset(for: .ten) // lowest position where handle still shows
                     if !isDraggingSheet { isDraggingSheet = true; dragStartOffset = bottomSheetOffset }
                     bottomSheetOffset = max(0, min(maxOffset, dragStartOffset + value.translation.height))
                 },

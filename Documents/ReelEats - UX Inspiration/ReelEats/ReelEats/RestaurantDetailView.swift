@@ -624,8 +624,8 @@ struct NewCollectionView: View {
             
             // Cover mode selector
             HStack(spacing: 16) {
-                coverModeButton(mode: .gradient, title: "Gradient + Emoji", icon: "paintpalette.fill")
                 coverModeButton(mode: .image, title: "Upload Photo", icon: "photo.fill")
+                coverModeButton(mode: .gradient, title: "Gradient + Emoji", icon: "paintpalette.fill")
             }
             .padding(.horizontal, 24)
             
