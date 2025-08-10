@@ -4273,46 +4273,6 @@ struct MapTabView: View {
             }
             .ignoresSafeArea()
             
-            // Floating category filters just above bottom sheet
-            VStack {
-                Spacer()
-                HStack(spacing: 12) {
-                    // Location circular filter
-                    Button(action: {}) {
-                        Image(systemName: "location.circle.fill")
-                            .font(.title3)
-                            .foregroundColor(.white)
-                            .frame(width: 36, height: 36)
-                            .background(Color.reelEatsAccent)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
-                    }
-                    
-                    ForEach([RestaurantCategory.restaurants, .cafe, .bars, .bakery], id: \.self) { category in
-                        Button(action: { selectedCategory = selectedCategory == category ? .all : category }) {
-                            HStack(spacing: 8) {
-                                Text(category.rawValue)
-                                    .font(.newYorkTag())
-                                    .lineLimit(1)
-                                    .fixedSize(horizontal: true, vertical: false)
-                            }
-                            .padding(.horizontal, category == .restaurants ? 16 : 12)
-                            .padding(.vertical, 8)
-                            .background(selectedCategory == category ? Color.reelEatsAccent : Color(.systemBackground))
-                            .foregroundColor(selectedCategory == category ? .white : .primary)
-                            .clipShape(Capsule())
-                            .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
-                        }
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                // Track the sheet top precisely (tiny gap)
-                .offset(y: bottomSheetOffset - offset(for: .thirty))
-                .padding(.bottom, 6)
-            }
-            .zIndex(3)
-            
             // Bottom sheet
             MapBottomSheetView(
                 selectedCollection: $selectedCollection,
