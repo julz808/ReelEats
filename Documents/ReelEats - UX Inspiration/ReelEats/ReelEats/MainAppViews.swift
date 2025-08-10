@@ -4322,14 +4322,18 @@ struct MapTabView: View {
                 showingBottomSheet: showingBottomSheet,
                 onDragChanged: { value in
                     if !isDraggingSheet { isDraggingSheet = true; dragStartOffset = bottomSheetOffset }
-                    // Clamp continuously while dragging so it never disappears
-                    bottomSheetOffset = max(offset(for: .ten), min(offset(for: .ninety), dragStartOffset + value.translation.height))
+                    // Clamp with correct bounds: .ninety is the minimum offset (most visible), .ten is maximum (least visible)
+                    let minOffset = offset(for: .ninety)
+                    let maxOffset = offset(for: .ten)
+                    bottomSheetOffset = min(max(minOffset, dragStartOffset + value.translation.height), maxOffset)
                 },
                 onDragEnded: { value in
                     withAnimation(.spring()) {
                         isDraggingSheet = false
                         let nearest = snapOffsets.min(by: { abs($0 - bottomSheetOffset) < abs($1 - bottomSheetOffset) }) ?? bottomSheetOffset
-                        bottomSheetOffset = max(offset(for: .ten), min(offset(for: .ninety), nearest))
+                        let minOffset = offset(for: .ninety)
+                        let maxOffset = offset(for: .ten)
+                        bottomSheetOffset = min(max(minOffset, nearest), maxOffset)
                         showingBottomSheet = nearest <= offset(for: .fifty)
                     }
                 }
@@ -4342,7 +4346,7 @@ struct MapTabView: View {
         }
         // Defensive clamp in case any external state nudges the offset
         .onChange(of: bottomSheetOffset) { _, newVal in
-            let clamped = max(offset(for: .ten), min(offset(for: .ninety), newVal))
+            let clamped = min(max(offset(for: .ninety), newVal), offset(for: .ten))
             if clamped != newVal { bottomSheetOffset = clamped }
         }
         .onChange(of: selectedRestaurant) { _, newRestaurant in
