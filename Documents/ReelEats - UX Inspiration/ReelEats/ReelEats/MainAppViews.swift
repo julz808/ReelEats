@@ -315,6 +315,16 @@ struct MyListsFilterBar: View {
     
     var body: some View {
         HStack(spacing: 12) {
+            // All filter
+            FilterPill(
+                text: "All",
+                isSelected: collectionFilter == .all,
+                hasDropdown: false
+            ) {
+                HapticManager.shared.light()
+                collectionFilter = .all
+            }
+            
             // By Me filter
             FilterPill(
                 text: "By Me",
@@ -1189,6 +1199,8 @@ struct CollectionsEmbeddedContent: View {
     
     private var filteredCollections: [Collection] {
         switch collectionFilter {
+        case .all:
+            return store.collections
         case .byMe:
             return store.collections.filter { $0.filterType == .byMe }
         case .byUs:
@@ -1384,6 +1396,7 @@ enum SavedViewType: String, CaseIterable {
 }
 
 enum CollectionFilterType: String, CaseIterable {
+    case all = "All"
     case byMe = "By Me"
     case byUs = "By Us"
     case byOthers = "By Others"
@@ -1572,15 +1585,15 @@ struct SavedTabView: View {
     }
     
     private var filteredCollections: [Collection] {
-        // For now, all collections are "by me" since there's no user distinction
-        // In a real app, you'd filter based on creator
         switch collectionFilter {
-        case .byMe:
+        case .all:
             return store.collections
+        case .byMe:
+            return store.collections.filter { $0.filterType == .byMe }
         case .byUs:
-            return [] // No "by us" collections in demo
+            return store.collections.filter { $0.filterType == .byUs }
         case .byOthers:
-            return [] // No "by others" collections in demo
+            return store.collections.filter { $0.filterType == .byOthers }
         }
     }
     
@@ -3927,7 +3940,10 @@ struct MapBottomSheetView: View {
     
     private var restaurantListContent: some View {
         ForEach(filteredMapRestaurants.prefix(5), id: \.id) { restaurant in
-            RestaurantRowView(restaurant: restaurant)
+            Button(action: { selectedRestaurant = restaurant }) {
+                RestaurantRowView(restaurant: restaurant)
+            }
+            .buttonStyle(PlainButtonStyle())
         }
     }
     
@@ -4120,7 +4136,7 @@ struct MapSpotRow: View {
                         .foregroundColor(.primary)
                         .lineLimit(1)
                     
-                    Text("\(restaurant.category.rawValue) • \(String(format: "%.1f", restaurant.rating))★")
+                    Text(restaurant.category.rawValue)
                         .font(.newYorkCaption())
                         .foregroundColor(.secondary)
                 }
@@ -4216,7 +4232,7 @@ struct MapTabView: View {
     @State private var selectedCategory: RestaurantCategory? = .all
     @State private var selectedCollection: Collection?
     @State private var showingBottomSheet = false
-    @State private var bottomSheetOffset: CGFloat = UIScreen.main.bounds.height * 0.7 // 30% visible
+    @State private var bottomSheetOffset: CGFloat = UIScreen.main.bounds.height * 0.7 // 30% visible by default
     @State private var showingProfile = false
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: -37.8136, longitude: 144.9631), // Melbourne CBD
@@ -4232,22 +4248,8 @@ struct MapTabView: View {
             }
             .ignoresSafeArea()
             
-            // Top overlay with optional collection name
+            // Top overlay with optional collection name (search moved into bottom sheet)
             MapTopOverlay(selectedCollection: selectedCollection)
-            
-            // Location Info Panel for selected restaurant
-            if showingLocationInfo, let restaurant = selectedRestaurant {
-                LocationInfoPanel(
-                    restaurant: restaurant,
-                    onClose: {
-                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                            showingLocationInfo = false
-                            selectedRestaurant = nil
-                        }
-                    }
-                )
-                .environmentObject(store)
-            }
             
             // Bottom sheet with collections and categories
             MapBottomSheetView(
@@ -4276,10 +4278,8 @@ struct MapTabView: View {
             .environmentObject(store)
         }
         .onAppear {
-            // Start with bottom sheet partially visible
-            withAnimation(.spring()) {
-                bottomSheetOffset = 200
-            }
+            // Ensure we start with only 30% visible
+            bottomSheetOffset = UIScreen.main.bounds.height * 0.7
         }
         .onChange(of: selectedRestaurant) { _, newRestaurant in
             if let restaurant = newRestaurant {
@@ -4301,6 +4301,11 @@ struct MapTabView: View {
                     }
                 }
             }
+        }
+        // Show the same detail modal as Home when a spot is tapped
+        .sheet(item: $selectedRestaurant) { restaurant in
+            FullScreenRestaurantDetailView(restaurant: restaurant)
+                .environmentObject(store)
         }
         .sheet(isPresented: $showingProfile) {
             ProfileTabView()
@@ -5038,7 +5043,7 @@ struct RecimeStyleActionSheet: View {
                 ActionSheetButton(
                     icon: "person.fill",
                     title: "Create Personal Collection",
-                    subtitle: "Create a collection to your own taste",
+                    subtitle: "Create a personal collection to your own taste",
                     iconColor: .white,
                     backgroundColor: Color.reelEatsAccent
                 ) {

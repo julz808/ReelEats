@@ -72,11 +72,15 @@ struct WelcomeScreen: View {
             VStack(spacing: 50) {
                 Spacer()
                 
-                // Animated ReelEats logo with mascot
-                MascotView(size: 120)
-                .scaleEffect(isAnimating ? 1.0 : 0.3)
-                .rotationEffect(.degrees(isAnimating ? 0 : 180))
-                .animation(.spring(response: 1.2, dampingFraction: 0.6), value: isAnimating)
+                // Animated ReelEats R Logo above the title
+                Image("ReelEats R Logo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 120, height: 120)
+                    .scaleEffect(isAnimating ? 1.0 : 0.6)
+                    .rotationEffect(.degrees(isAnimating ? 0 : -10))
+                    .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+                    .animation(.spring(response: 1.0, dampingFraction: 0.65), value: isAnimating)
                 
                 // Brand name with gradient
                 VStack(spacing: 20) {
