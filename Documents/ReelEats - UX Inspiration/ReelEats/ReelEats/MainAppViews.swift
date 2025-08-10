@@ -4306,9 +4306,11 @@ struct MapTabView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 16)
-                // Keep pills hugging the sheet with a tiny gap and track movement
-                .padding(.bottom, max(6, offset(for: .thirty) - bottomSheetOffset + 6))
+                // Track the sheet top precisely (tiny gap)
+                .offset(y: bottomSheetOffset - offset(for: .thirty))
+                .padding(.bottom, 10)
             }
+            .zIndex(3)
             
             // Bottom sheet
             MapBottomSheetView(
@@ -4319,8 +4321,8 @@ struct MapTabView: View {
                 bottomSheetOffset: bottomSheetOffset,
                 showingBottomSheet: showingBottomSheet,
                 onDragChanged: { value in
-                    let maxOffset = offset(for: .ten) // lowest position where handle still shows
                     if !isDraggingSheet { isDraggingSheet = true; dragStartOffset = bottomSheetOffset }
+                    // Clamp continuously while dragging so it never disappears
                     bottomSheetOffset = max(offset(for: .ten), min(offset(for: .ninety), dragStartOffset + value.translation.height))
                 },
                 onDragEnded: { value in
@@ -4333,9 +4335,15 @@ struct MapTabView: View {
                 }
             )
             .environmentObject(store)
+            .zIndex(2)
         }
         .onAppear {
             bottomSheetOffset = offset(for: .thirty)
+        }
+        // Defensive clamp in case any external state nudges the offset
+        .onChange(of: bottomSheetOffset) { _, newVal in
+            let clamped = max(offset(for: .ten), min(offset(for: .ninety), newVal))
+            if clamped != newVal { bottomSheetOffset = clamped }
         }
         .onChange(of: selectedRestaurant) { _, newRestaurant in
             if let restaurant = newRestaurant {
@@ -6893,15 +6901,20 @@ struct ModernFilterBar: View {
     }
     
     private func calculateSheetHeight(for venueType: VenueType) -> CGFloat {
-        let baseHeight: CGFloat = 120 // Header + padding
-        let itemHeight: CGFloat = 72  // Each card height including spacing
-        let bottomPadding: CGFloat = 60 // Consistent bottom padding
+        // Tighter, best-practice sizing: show full rows and leave a little whitespace at the bottom
+        let headerHeight: CGFloat = 84
+        let cardHeight: CGFloat = 56
+        let rowSpacing: CGFloat = 12
+        let bottomPadding: CGFloat = 20
+        let screenMax: CGFloat = UIScreen.main.bounds.height * 0.88
         
         let itemCount = getCategoryCount(for: venueType)
         let rows = ceil(Double(itemCount) / 2.0) // 2 columns
-        let gridHeight = CGFloat(rows) * itemHeight
+        let gridHeight = CGFloat(rows) * cardHeight + max(0, CGFloat(rows - 1)) * rowSpacing
+        let desired = headerHeight + gridHeight + bottomPadding
         
-        return baseHeight + gridHeight + bottomPadding
+        // Ensure reasonable min/max bounds
+        return min(max(desired, 280), screenMax)
     }
     
     private func getCategoryCount(for venueType: VenueType) -> Int {
