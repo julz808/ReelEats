@@ -3854,7 +3854,8 @@ struct MapBottomSheetView: View {
                     if let collection = selectedCollection {
                         collectionHeaderView(collection)
                     }
-                    mainContentView
+                    // Reduce whitespace between handle and search by pulling content up slightly
+                    mainContentView.padding(.top, -8)
                 }
             }
             .background(Color(.systemBackground))
@@ -4308,7 +4309,7 @@ struct MapTabView: View {
                 .padding(.horizontal, 16)
                 // Track the sheet top precisely (tiny gap)
                 .offset(y: bottomSheetOffset - offset(for: .thirty))
-                .padding(.bottom, 10)
+                .padding(.bottom, 6)
             }
             .zIndex(3)
             
@@ -4332,6 +4333,7 @@ struct MapTabView: View {
                         isDraggingSheet = false
                         let nearest = snapOffsets.min(by: { abs($0 - bottomSheetOffset) < abs($1 - bottomSheetOffset) }) ?? bottomSheetOffset
                         let minOffset = offset(for: .ninety)
+                        // Cap downward to screenshot-like position slightly above nav by not exceeding .thirty when released near bottom
                         let maxOffset = offset(for: .ten)
                         bottomSheetOffset = min(max(minOffset, nearest), maxOffset)
                         showingBottomSheet = nearest <= offset(for: .fifty)
@@ -5014,8 +5016,8 @@ struct ConsistentDragHandle: View {
         RoundedRectangle(cornerRadius: 2.5)
             .fill(Color(.systemGray4))
             .frame(width: 40, height: 4)
-            .padding(.top, 12)
-            .padding(.bottom, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
     }
 }
 
@@ -6432,7 +6434,7 @@ struct Collection: Identifiable {
 struct Melbourne {
     static let demoRestaurants: [Restaurant] = [
         Restaurant(
-            name: "Baker Bleu Opens Biggest Australian Bakery",
+            name: "Baker Bleu",
             category: .restaurants,
             imageURL: "https://images.unsplash.com/photo-1509440159596-0249088772ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
             emoji: "🥖",
