@@ -434,6 +434,8 @@ struct AddSpotDetailView: View {
             return "☕"
         case .bars:
             return "🍸"
+        case .bakery:
+            return "🥐"
         case .desserts:
             return "🧁"
         case .fastfood:
