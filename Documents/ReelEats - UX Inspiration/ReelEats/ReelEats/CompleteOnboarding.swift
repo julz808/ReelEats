@@ -112,7 +112,7 @@ struct WelcomeScreen: View {
                     
                     Text("From feed to fed")
                         .font(.poppinsBodyTemp(size: 22))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.reelEatsAccent)
                         .opacity(isAnimating ? 1.0 : 0.0)
                         .offset(y: isAnimating ? 0 : 20)
                         .animation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.6), value: isAnimating)

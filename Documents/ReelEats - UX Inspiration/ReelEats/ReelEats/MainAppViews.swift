@@ -50,6 +50,38 @@ struct HomeTabView: View {
     @State private var collectionsSortOrder: SortOrder = .recentlyAdded
     @State private var showingCollectionsSortOptions = false
     @State private var collectionFilter: CollectionFilterType = .all
+    @State private var visitStatusFilter: HomeTabView.VisitStatusFilter = .all
+    @State private var showingVisitStatusOptions = false
+    
+    enum VisitStatusFilter: String, CaseIterable {
+        case all = "All"
+        case visited = "Visited"
+        case notVisited = "Want to Try"
+        
+        var icon: String {
+            switch self {
+            case .all: return "mappin"
+            case .visited: return "mappin.circle.fill"
+            case .notVisited: return "mappin.circle"
+            }
+        }
+        
+        var displayName: String {
+            switch self {
+            case .all: return "All"
+            case .visited: return "Visited"
+            case .notVisited: return "Want to Try"
+            }
+        }
+        
+        var shortName: String {
+            switch self {
+            case .all: return "All"
+            case .visited: return "Visited"
+            case .notVisited: return "Want to Try"
+            }
+        }
+    }
     
     enum ContentType: String, CaseIterable {
         case spots = "All Spots"
@@ -156,6 +188,9 @@ struct HomeTabView: View {
         .sheet(isPresented: $showingCollectionsSortOptions) {
             SortOptionsBottomSheet(sortOrder: $collectionsSortOrder)
         }
+        .sheet(isPresented: $showingVisitStatusOptions) {
+            VisitStatusOptionsBottomSheet(visitStatusFilter: $visitStatusFilter)
+        }
     }
     
     // MARK: - Computed Properties to reduce body complexity
@@ -193,7 +228,9 @@ struct HomeTabView: View {
             SpotifySortAndGrid(
                 sortOrder: $sortOrder,
                 showingSortOptions: $showingSortOptions,
-                showingSearch: $showingSearch
+                showingSearch: $showingSearch,
+                visitStatusFilter: $visitStatusFilter,
+                showingVisitStatusOptions: $showingVisitStatusOptions
             )
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
@@ -202,6 +239,7 @@ struct HomeTabView: View {
             SpotsListContent(
                 selectedCategory: $selectedCategory,
                 sortOrder: sortOrder,
+                visitStatusFilter: visitStatusFilter,
                 onRestaurantSelect: { restaurant in
                     selectedRestaurantForDetail = restaurant
                 }
@@ -289,6 +327,66 @@ struct SortOptionsBottomSheet: View {
                     .buttonStyle(PlainButtonStyle())
                     
                     if option != HomeTabView.SortOrder.allCases.last {
+                        Rectangle()
+                            .fill(Color(.systemGray5))
+                            .frame(height: 1)
+                            .padding(.leading, 20)
+                    }
+                }
+            }
+            
+            Spacer(minLength: 20)
+        }
+        .background(Color(.systemBackground))
+        .presentationDetents([.height(250), .medium])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - Visit Status Options Bottom Sheet
+
+struct VisitStatusOptionsBottomSheet: View {
+    @Binding var visitStatusFilter: HomeTabView.VisitStatusFilter
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Handle
+            ConsistentDragHandle()
+            
+            // Header
+            Text("Filter By")
+                .font(.newYorkHeader(size: 20))
+                .foregroundColor(.primary)
+                .padding(.bottom, 20)
+            
+            // Visit status options
+            VStack(spacing: 0) {
+                ForEach(HomeTabView.VisitStatusFilter.allCases, id: \.self) { option in
+                    Button(action: {
+                        HapticManager.shared.selection()
+                        visitStatusFilter = option
+                        dismiss()
+                    }) {
+                        HStack(spacing: 12) {
+                            Text(option.rawValue)
+                                .font(.newYorkButton())
+                                .foregroundColor(visitStatusFilter == option ? .reelEatsAccent : .primary)
+                            
+                            Spacer()
+                            
+                            if visitStatusFilter == option {
+                                Image(systemName: "checkmark")
+                                    .font(.newYorkButton())
+                                    .foregroundColor(.reelEatsAccent)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    if option != HomeTabView.VisitStatusFilter.allCases.last {
                         Rectangle()
                             .fill(Color(.systemGray5))
                             .frame(height: 1)
@@ -595,6 +693,8 @@ struct SpotifySortAndGrid: View {
     @Binding var sortOrder: HomeTabView.SortOrder
     @Binding var showingSortOptions: Bool
     @Binding var showingSearch: Bool
+    var visitStatusFilter: Binding<HomeTabView.VisitStatusFilter>?
+    var showingVisitStatusOptions: Binding<Bool>?
     @State private var showingInlineSearch = false
     @State private var searchText = ""
     
@@ -620,6 +720,29 @@ struct SpotifySortAndGrid: View {
                 .padding(.vertical, 6)
             }
             .buttonStyle(PlainButtonStyle())
+            
+            // Visit Status filter button (only for All Spots)
+            if let visitStatusFilter = visitStatusFilter, let showingVisitStatusOptions = showingVisitStatusOptions {
+                Button(action: {
+                    HapticManager.shared.light()
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showingVisitStatusOptions.wrappedValue.toggle()
+                    }
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: visitStatusFilter.wrappedValue.icon)
+                            .font(.clashDisplaySecondaryTemp())
+                            .foregroundColor(.primary)
+                        
+                        Text(visitStatusFilter.wrappedValue.shortName)
+                            .font(.clashDisplaySecondaryTemp())
+                            .foregroundColor(.primary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
             
             // Animated search bar
             if showingInlineSearch {
@@ -1067,16 +1190,34 @@ struct SpotsListView: View {
 struct SpotsListContent: View {
     @Binding var selectedCategory: RestaurantCategory?
     var sortOrder: HomeTabView.SortOrder
+    var visitStatusFilter: HomeTabView.VisitStatusFilter
     let onRestaurantSelect: (Restaurant) -> Void
     @EnvironmentObject var store: RestaurantStore
     
     var sortedRestaurants: [Restaurant] {
         var restaurants = store.savedRestaurants
         
+        // Filter by category
         if let category = selectedCategory, category != .all {
             restaurants = restaurants.filter { $0.category == category }
         }
         
+        // Filter by visit status
+        switch visitStatusFilter {
+        case .all:
+            break // No filtering
+        case .visited:
+            restaurants = restaurants.filter { restaurant in
+                store.getUserData(for: restaurant.id)?.visitStatus == .visited
+            }
+        case .notVisited:
+            restaurants = restaurants.filter { restaurant in
+                let userData = store.getUserData(for: restaurant.id)
+                return userData?.visitStatus != .visited
+            }
+        }
+        
+        // Sort restaurants
         switch sortOrder {
         case .recentlyAdded:
             return restaurants // Assuming they're already in added order
@@ -2233,6 +2374,8 @@ struct CollectionDetailView: View {
     @State private var showingRestaurantDetail = false
     @State private var selectedFilter: CollectionFilterType = .byMe
     @State private var selectedSort: SortOption = .alphabetical
+    @State private var visitStatusFilter: HomeTabView.VisitStatusFilter = .all
+    @State private var showingVisitStatusOptions = false
     // Filter dropdown states
     @State private var showingCuisineDropdown = false
     @State private var showingDistanceDropdown = false
@@ -2250,22 +2393,36 @@ struct CollectionDetailView: View {
             filtered
         }
         
+        // Apply visit status filtering
+        let visitStatusFiltered = switch visitStatusFilter {
+        case .all:
+            categoryFiltered
+        case .visited:
+            categoryFiltered.filter { restaurant in
+                store.getUserData(for: restaurant.id)?.visitStatus == .visited
+            }
+        case .notVisited:
+            categoryFiltered.filter { restaurant in
+                store.getUserData(for: restaurant.id)?.visitStatus != .visited
+            }
+        }
+        
         // Apply sorting
         switch selectedSort {
         case .alphabetical:
-            return categoryFiltered.sorted { $0.name < $1.name }
+            return visitStatusFiltered.sorted { $0.name < $1.name }
         case .newest:
-            return categoryFiltered // For collections, newest means recently added - would need timestamps
+            return visitStatusFiltered // For collections, newest means recently added - would need timestamps
         case .rating:
-            return categoryFiltered.sorted { (lhs, rhs) in
+            return visitStatusFiltered.sorted { (lhs, rhs) in
                 let lhsRating = store.getUserData(for: lhs.id)?.userRating ?? 0.0
                 let rhsRating = store.getUserData(for: rhs.id)?.userRating ?? 0.0
                 return lhsRating > rhsRating
             }
         case .recents:
-            return categoryFiltered // Default order
+            return visitStatusFiltered // Default order
         case .recentlyAdded:
-            return categoryFiltered // Default order - would need timestamps to implement properly
+            return visitStatusFiltered // Default order - would need timestamps to implement properly
         }
     }
     
@@ -2333,6 +2490,9 @@ struct CollectionDetailView: View {
                     .environmentObject(store)
             }
         }
+        .sheet(isPresented: $showingVisitStatusOptions) {
+            VisitStatusOptionsBottomSheet(visitStatusFilter: $visitStatusFilter)
+        }
     }
     
     private var headerSection: some View {
@@ -2395,40 +2555,15 @@ struct CollectionDetailView: View {
                             .padding(.horizontal, 20)
                             .padding(.top, 8)
                         
-                        // Creator and collaborators section (like Spotify)
-                        HStack(spacing: 12) {
-                            // Creator profile circle (smaller)
-                            Circle()
-                                .fill(Color.reelEatsAccent)
-                                .frame(width: 28, height: 28)
-                                .overlay(
-                                    Text("J")
-                                        .font(.clashDisplaySecondaryTemp())
-                                        .foregroundColor(.white)
-                                )
-                            
-                            // Collaborator circles (colored with letters, smaller)
-                            ForEach(Array(["M", "A"].enumerated()), id: \.offset) { index, letter in
-                                let colors: [Color] = [.blue, .green, .orange, .purple]
-                                Circle()
-                                    .fill(colors[index % colors.count])
-                                    .frame(width: 28, height: 28)
-                                    .overlay(
-                                        Text(letter)
-                                            .font(.clashDisplaySecondaryTemp())
-                                            .foregroundColor(.white)
-                                    )
-                            }
+                        // Creator and collaborators section with spots count (text format)
+                        HStack {
+                            Text("By \(collection.creatorText) • \(collectionSpots.count) spots")
+                                .font(.clashDisplaySecondaryTemp())
+                                .foregroundColor(.secondary)
                             
                             Spacer()
                         }
                         .padding(.horizontal, 20)
-                        
-                        // Spots count (like playlist duration)
-                        Text("\(collectionSpots.count) spots")
-                            .font(.clashDisplaySecondaryTemp())
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, 20)
                     }
                     
                     // Action buttons row (exactly as requested)
@@ -2506,6 +2641,22 @@ struct CollectionDetailView: View {
                             .foregroundColor(.primary)
                         }
                         
+                        // Visit status filter
+                        Button(action: {
+                            HapticManager.shared.light()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showingVisitStatusOptions.toggle()
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: visitStatusFilter.icon)
+                                    .font(.clashDisplaySecondaryTemp())
+                                Text(visitStatusFilter.displayName)
+                                    .font(.clashDisplaySecondaryTemp())
+                            }
+                            .foregroundColor(.primary)
+                        }
+                        
                         Spacer()
                     }
                     .padding(.horizontal, 20)
@@ -2526,7 +2677,12 @@ struct CollectionDetailView: View {
 
 struct RestaurantOptionsSheet: View {
     let restaurant: Restaurant
+    @EnvironmentObject var store: RestaurantStore
     @Environment(\.dismiss) private var dismiss
+    
+    private var userVisitStatus: VisitStatus {
+        store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -2551,38 +2707,34 @@ struct RestaurantOptionsSheet: View {
                     Text(restaurant.name)
                         .font(.poppinsRestaurantNameTemp(size: 16))
                         .foregroundColor(.primary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     Text(restaurant.description)
                         .font(.clashDisplaySecondaryTemp())
                         .italic()
                         .foregroundColor(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 
                 Spacer()
             }
             .padding(.horizontal, 20)
+            .padding(.top, 20)
             .padding(.bottom, 30)
             
             // Options list
             VStack(spacing: 0) {
+                // Visit Status Toggle
                 OptionsButton(
-                    icon: "square.and.arrow.up",
-                    title: "Share",
-                    subtitle: "Send to friends",
+                    icon: userVisitStatus == .visited ? "checkmark.circle.fill" : "circle",
+                    title: userVisitStatus == .visited ? "Mark as Want to Try" : "Mark as Visited",
+                    subtitle: userVisitStatus == .visited ? "Remove from visited" : "Add to visited",
                     action: {
                         HapticManager.shared.medium()
-                        dismiss()
-                    }
-                )
-                
-                OptionsButton(
-                    icon: "folder.badge.plus",
-                    title: "Add to Collection",
-                    subtitle: "Save to your collections",
-                    action: {
-                        HapticManager.shared.medium()
+                        let newStatus: VisitStatus = userVisitStatus == .visited ? .wantToTry : .visited
+                        store.updateVisitStatus(for: restaurant.id, status: newStatus)
                         dismiss()
                     }
                 )
@@ -2601,6 +2753,26 @@ struct RestaurantOptionsSheet: View {
                     icon: "map.fill",
                     title: "View on Map",
                     subtitle: "See location",
+                    action: {
+                        HapticManager.shared.medium()
+                        dismiss()
+                    }
+                )
+                
+                OptionsButton(
+                    icon: "folder.badge.plus",
+                    title: "Add to Collection",
+                    subtitle: "Save to your collections",
+                    action: {
+                        HapticManager.shared.medium()
+                        dismiss()
+                    }
+                )
+                
+                OptionsButton(
+                    icon: "square.and.arrow.up",
+                    title: "Share",
+                    subtitle: "Send to friends",
                     action: {
                         HapticManager.shared.medium()
                         dismiss()
@@ -3011,6 +3183,7 @@ struct RestaurantListCard: View {
         .opacity(imageLoaded ? 1.0 : 0.8)
         .sheet(isPresented: $showingOptions) {
             RestaurantOptionsSheet(restaurant: restaurant)
+                .environmentObject(store)
         }
         .sheet(isPresented: $showingRatingSlider) {
             RatingSliderView(
@@ -3545,24 +3718,75 @@ struct FullScreenRestaurantDetailView: View {
                             .cornerRadius(20)
                         }
                         
-                        // User Rating Section
-                        VStack(spacing: 12) {
-                            Text("Your Rating")
-                                .font(.clashDisplayButtonTemp())
-                                .foregroundColor(.primary)
+                        // Visit Status Button Toggle - Center aligned
+                        VStack(spacing: 16) {
+                            HStack(spacing: 4) {
+                                // Want to Try button
+                                Button(action: {
+                                    HapticManager.shared.selection()
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                        store.updateVisitStatus(for: restaurant.id, status: .wantToTry)
+                                    }
+                                }) {
+                                    Text("want to try")
+                                        .font(.clashDisplayBodyTemp(size: 15))
+                                        .foregroundColor((store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry) == .wantToTry ? .white : .black)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 20)
+                                                .fill((store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry) == .wantToTry ? Color.black : Color.white)
+                                                .stroke(Color.black.opacity(0.2), lineWidth: 1)
+                                                .scaleEffect((store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry) == .wantToTry ? 1.02 : 1.0)
+                                        )
+                                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: (store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry))
+                                }
+                                
+                                // Visited button
+                                Button(action: {
+                                    HapticManager.shared.selection()
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                        store.updateVisitStatus(for: restaurant.id, status: .visited)
+                                    }
+                                }) {
+                                    Text("visited")
+                                        .font(.clashDisplayBodyTemp(size: 15))
+                                        .foregroundColor((store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry) == .visited ? .white : .black)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 20)
+                                                .fill((store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry) == .visited ? Color.black : Color.white)
+                                                .stroke(Color.black.opacity(0.2), lineWidth: 1)
+                                                .scaleEffect((store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry) == .visited ? 1.02 : 1.0)
+                                        )
+                                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: (store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry))
+                                }
+                            }
+                            .frame(maxWidth: 300) // Constrain width
                             
-                            HStack(spacing: 8) {
-                                ForEach(1...5, id: \.self) { index in
-                                    Button(action: {
-                                        HapticManager.shared.light()
-                                        store.updateUserRating(for: restaurant.id, rating: Double(index))
-                                    }) {
-                                        Image(systemName: index <= Int(userRating) ? "star.fill" : "star")
-                                            .font(.clashDisplayHeaderTemp(size: 24))
-                                            .foregroundColor(index <= Int(userRating) ? .yellow : .gray.opacity(0.3))
-                                            .animation(.easeInOut(duration: 0.1), value: userRating)
+                            // Rating stars (only show when visited) - centered below
+                            if (store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry) == .visited {
+                                HStack(spacing: 8) {
+                                    ForEach(1...5, id: \.self) { index in
+                                        Button(action: {
+                                            HapticManager.shared.light()
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                                store.updateUserRating(for: restaurant.id, rating: Double(index))
+                                            }
+                                        }) {
+                                            Image(systemName: index <= Int(userRating) ? "star.fill" : "star")
+                                                .font(.clashDisplayHeaderTemp(size: 22))
+                                                .foregroundColor(index <= Int(userRating) ? .yellow : .gray.opacity(0.3))
+                                                .scaleEffect(index <= Int(userRating) ? 1.1 : 1.0)
+                                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: userRating)
+                                        }
                                     }
                                 }
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity).animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.2)),
+                                    removal: .scale.combined(with: .opacity).animation(.easeInOut(duration: 0.2))
+                                ))
                             }
                         }
                         .padding(.top, 20)
@@ -3863,7 +4087,7 @@ struct MapBottomSheetView: View {
             .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: -5)
             .offset(y: bottomSheetOffset)
             .gesture(
-                DragGesture()
+                DragGesture(coordinateSpace: .global)
                     .onChanged(onDragChanged)
                     .onEnded(onDragEnded)
             )
@@ -4051,6 +4275,35 @@ struct MapBottomSheetView: View {
     }
 }
 
+// MARK: - Map Filter Pill Component
+
+struct MapFilterPill: View {
+    let title: String
+    let category: RestaurantCategory
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: {
+            HapticManager.shared.light()
+            action()
+        }) {
+            Text(title)
+                .font(.newYorkButton(size: 12))
+                .fontWeight(isSelected ? .semibold : .medium)
+                .foregroundColor(isSelected ? .white : .primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(isSelected ? Color.black : Color.white)
+                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
 // MARK: - Supporting Views for MapBottomSheetView
 
 struct MapCollectionCard: View {
@@ -4150,11 +4403,6 @@ struct MapSpotRow: View {
                 }
                 
                 Spacer()
-                
-                // Distance or category icon
-                Image(systemName: restaurant.category.icon)
-                    .font(.newYorkCaption())
-                    .foregroundColor(restaurant.category.color)
             }
             .padding(.vertical, 8)
         }
@@ -4251,9 +4499,14 @@ struct MapTabView: View {
     @State private var showingLocationInfo = false
     
     enum BottomSheetLevel: CaseIterable {
-        case ten, thirty, fifty, ninety
+        case fifteen, thirty, fifty, ninety
         var visible: CGFloat {
-            switch self { case .ten: return 0.10; case .thirty: return 0.30; case .fifty: return 0.50; case .ninety: return 0.90 }
+            switch self { 
+                case .fifteen: return 0.15; 
+                case .thirty: return 0.30; 
+                case .fifty: return 0.50; 
+                case .ninety: return 0.90 
+            }
         }
     }
     
@@ -4262,71 +4515,167 @@ struct MapTabView: View {
     }
     
     private var snapOffsets: [CGFloat] {
-        [offset(for: .ten), offset(for: .thirty), offset(for: .fifty), offset(for: .ninety)]
+        [offset(for: .fifteen), offset(for: .thirty), offset(for: .fifty), offset(for: .ninety)]
     }
     
     var body: some View {
         ZStack {
-            // Map with proper API usage
-            ModernMapView(region: $region, restaurants: filteredMapRestaurants) { restaurant in
-                selectedRestaurant = restaurant
-            }
-            .ignoresSafeArea()
-            
-            // Bottom sheet
-            MapBottomSheetView(
-                selectedCollection: $selectedCollection,
-                selectedCategory: $selectedCategory,
-                selectedRestaurant: $selectedRestaurant,
-                filteredMapRestaurants: filteredMapRestaurants,
-                bottomSheetOffset: bottomSheetOffset,
-                showingBottomSheet: showingBottomSheet,
-                onDragChanged: { value in
-                    if !isDraggingSheet { isDraggingSheet = true; dragStartOffset = bottomSheetOffset }
-                    // Clamp with correct bounds: .ninety is the minimum offset (most visible), .ten is maximum (least visible)
-                    let minOffset = offset(for: .ninety)
-                    let maxOffset = offset(for: .ten)
-                    bottomSheetOffset = min(max(minOffset, dragStartOffset + value.translation.height), maxOffset)
-                },
-                onDragEnded: { value in
-                    withAnimation(.spring()) {
-                        isDraggingSheet = false
-                        let nearest = snapOffsets.min(by: { abs($0 - bottomSheetOffset) < abs($1 - bottomSheetOffset) }) ?? bottomSheetOffset
-                        let minOffset = offset(for: .ninety)
-                        // Cap downward to screenshot-like position slightly above nav by not exceeding .thirty when released near bottom
-                        let maxOffset = offset(for: .ten)
-                        bottomSheetOffset = min(max(minOffset, nearest), maxOffset)
-                        showingBottomSheet = nearest <= offset(for: .fifty)
-                    }
-                }
-            )
-            .environmentObject(store)
-            .zIndex(2)
+            mapView
+            filterControlsOverlay
+            bottomSheet
         }
         .onAppear {
             bottomSheetOffset = offset(for: .thirty)
         }
-        // Defensive clamp in case any external state nudges the offset
         .onChange(of: bottomSheetOffset) { _, newVal in
-            let clamped = min(max(offset(for: .ninety), newVal), offset(for: .ten))
+            let clamped = min(max(offset(for: .ninety), newVal), offset(for: .fifteen))
             if clamped != newVal { bottomSheetOffset = clamped }
         }
-        .onChange(of: selectedRestaurant) { _, newRestaurant in
-            if let restaurant = newRestaurant {
-                withAnimation(.easeInOut(duration: 1.0)) {
-                    region = MKCoordinateRegion(
-                        center: CLLocationCoordinate2D(
-                            latitude: restaurant.latitude,
-                            longitude: restaurant.longitude
-                        ),
-                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                    )
-                }
-            }
+        .onChange(of: selectedRestaurant) { oldValue, newValue in
+            handleRestaurantSelection(oldValue, newValue)
         }
         .sheet(isPresented: $showingProfile) {
             ProfileTabView()
                 .environmentObject(store)
+        }
+    }
+    
+    private var mapView: some View {
+        ModernMapView(region: $region, restaurants: filteredMapRestaurants) { restaurant in
+            selectedRestaurant = restaurant
+        }
+        .ignoresSafeArea()
+    }
+    
+    private var filterControlsOverlay: some View {
+        VStack {
+            HStack(spacing: 8) {
+                locationButton
+                filterPills
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 20) // Move much higher up, closer to top
+            
+            Spacer()
+        }
+    }
+    
+    private var locationButton: some View {
+        Button(action: centerOnLocation) {
+            Image(systemName: "location.circle.fill")
+                .font(.newYorkButton(size: 16))
+                .foregroundColor(.white)
+                .frame(width: 36, height: 36)
+                .background(Color.black.opacity(0.8))
+                .clipShape(Circle())
+        }
+    }
+    
+    private var filterPills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                MapFilterPill(
+                    title: "Restaurants",
+                    category: .restaurants,
+                    isSelected: selectedCategory == .restaurants || selectedCategory == .all,
+                    action: { selectedCategory = selectedCategory == .restaurants ? .all : .restaurants }
+                )
+                
+                MapFilterPill(
+                    title: "Cafes",
+                    category: .cafe,
+                    isSelected: selectedCategory == .cafe,
+                    action: { selectedCategory = selectedCategory == .cafe ? .all : .cafe }
+                )
+                
+                MapFilterPill(
+                    title: "Bars",
+                    category: .bars,
+                    isSelected: selectedCategory == .bars,
+                    action: { selectedCategory = selectedCategory == .bars ? .all : .bars }
+                )
+                
+                MapFilterPill(
+                    title: "Bakeries",
+                    category: .bakery,
+                    isSelected: selectedCategory == .bakery,
+                    action: { selectedCategory = selectedCategory == .bakery ? .all : .bakery }
+                )
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+    
+    private var bottomSheet: some View {
+        MapBottomSheetView(
+            selectedCollection: $selectedCollection,
+            selectedCategory: $selectedCategory,
+            selectedRestaurant: $selectedRestaurant,
+            filteredMapRestaurants: filteredMapRestaurants,
+            bottomSheetOffset: bottomSheetOffset,
+            showingBottomSheet: showingBottomSheet,
+            onDragChanged: handleDragChanged,
+            onDragEnded: handleDragEnded
+        )
+        .environmentObject(store)
+        .zIndex(2)
+    }
+    
+    private func centerOnLocation() {
+        HapticManager.shared.light()
+        withAnimation(.easeInOut(duration: 1.0)) {
+            region = MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: -37.8136, longitude: 144.9631),
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            )
+        }
+    }
+    
+    private func handleDragChanged(_ value: DragGesture.Value) {
+        if !isDraggingSheet {
+            isDraggingSheet = true
+            dragStartOffset = bottomSheetOffset
+        }
+        let minOffset = offset(for: .ninety)
+        let maxOffset = offset(for: .fifteen) // Prevent hiding more than 15% visible
+        bottomSheetOffset = min(max(minOffset, dragStartOffset + value.translation.height), maxOffset)
+    }
+    
+    private func handleDragEnded(_ value: DragGesture.Value) {
+        withAnimation(.spring()) {
+            isDraggingSheet = false
+            let nearest = snapOffsets.min(by: { abs($0 - bottomSheetOffset) < abs($1 - bottomSheetOffset) }) ?? bottomSheetOffset
+            let minOffset = offset(for: .ninety)
+            let maxOffset = offset(for: .fifteen) // Prevent hiding more than 15% visible
+            bottomSheetOffset = min(max(minOffset, nearest), maxOffset)
+            showingBottomSheet = nearest <= offset(for: .fifty)
+        }
+    }
+    
+    private func handleRestaurantSelection(_ oldValue: Restaurant?, _ newRestaurant: Restaurant?) {
+        if let restaurant = newRestaurant {
+            // Reset drag state to prevent stuck behavior
+            isDraggingSheet = false
+            
+            withAnimation(.easeInOut(duration: 1.0)) {
+                region = MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(
+                        latitude: restaurant.latitude,
+                        longitude: restaurant.longitude
+                    ),
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                )
+                bottomSheetOffset = offset(for: .ninety)
+                showingBottomSheet = true
+            }
+        } else {
+            // Reset drag state when deselecting
+            isDraggingSheet = false
+            
+            withAnimation(.easeInOut(duration: 0.5)) {
+                bottomSheetOffset = offset(for: .thirty)
+            }
         }
     }
     
@@ -6131,23 +6480,21 @@ struct CustomBottomNavBar: View {
                         
                         Spacer()
                         
-                        // Center floating + button with animation to X
+                        // Center floating + button (always +, no X)
                         Button(action: {
                             HapticManager.shared.light()
-                            if showingRecimeSheet {
-                                showingRecimeSheet = false
-                            } else {
-                                showingRecimeSheet = true
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                showingRecimeSheet.toggle()
                             }
                         }) {
-                            Image(systemName: showingRecimeSheet ? "xmark" : "plus")
+                            Image(systemName: "plus")
                                 .font(.newYorkButton(size: 24))
                                 .foregroundColor(.white)
                                 .frame(width: 60, height: 60)
                                 .background(Color.reelEatsAccent)
                                 .clipShape(Circle())
                                 .shadow(color: .reelEatsAccent.opacity(0.4), radius: 8, x: 0, y: 4)
-                                .rotationEffect(.degrees(showingRecimeSheet ? 90 : 0))
+                                .scaleEffect(showingRecimeSheet ? 0.9 : 1.0)
                                 .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showingRecimeSheet)
                         }
                         .offset(y: -17)
@@ -6371,9 +6718,9 @@ struct Collection: Identifiable {
         if creators.count == 1 {
             return creators[0]
         } else if creators.count == 2 {
-            return "\(creators[0]) +1"
+            return "\(creators[0]) & 1 other"
         } else if creators.count > 2 {
-            return "\(creators[0]) +\(creators.count - 1)"
+            return "\(creators[0]) & \(creators.count - 1) others"
         }
         return ""
     }
