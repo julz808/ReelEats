@@ -5051,6 +5051,7 @@ struct RestaurantMapPin: View {
 struct ProfileTabView: View {
     @EnvironmentObject var store: RestaurantStore
     @State private var showingSettings = false
+    @State private var showingInstagramMock = false
     
     var body: some View {
         NavigationView {
@@ -5104,6 +5105,32 @@ struct ProfileTabView: View {
                             .frame(height: 44)
                             .background(Color(.systemGray6))
                             .cornerRadius(12)
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Instagram Mock Flow button
+                    Button(action: {
+                        showingInstagramMock = true
+                    }) {
+                        HStack {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(.white)
+                            
+                            Text("Instagram Mock Flow")
+                                .font(.clashDisplayBodyTemp())
+                                .foregroundColor(.white)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.purple, Color.pink],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(12)
                     }
                     .padding(.horizontal, 20)
                     
@@ -5173,6 +5200,9 @@ struct ProfileTabView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
                 .environmentObject(store)
+        }
+        .fullScreenCover(isPresented: $showingInstagramMock) {
+            InstagramMockView()
         }
     }
 }
