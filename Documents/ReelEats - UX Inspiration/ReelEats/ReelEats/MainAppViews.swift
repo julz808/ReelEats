@@ -5052,7 +5052,8 @@ struct ProfileTabView: View {
     @EnvironmentObject var store: RestaurantStore
     @State private var showingSettings = false
     @State private var showingInstagramMock = false
-    
+    @State private var showingPremiumPaywall = false
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -5116,7 +5117,7 @@ struct ProfileTabView: View {
                             Image(systemName: "camera.fill")
                                 .font(.system(size: 18))
                                 .foregroundColor(.white)
-                            
+
                             Text("Instagram Mock Flow")
                                 .font(.clashDisplayBodyTemp())
                                 .foregroundColor(.white)
@@ -5133,7 +5134,27 @@ struct ProfileTabView: View {
                         .cornerRadius(12)
                     }
                     .padding(.horizontal, 20)
-                    
+
+                    // Paywall Mock Flow button
+                    Button(action: {
+                        showingPremiumPaywall = true
+                    }) {
+                        HStack {
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(.white)
+
+                            Text("Paywall Mock Flow")
+                                .font(.clashDisplayBodyTemp())
+                                .foregroundColor(.white)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(Color.reelEatsAccent)
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal, 20)
+
                     // Settings Sections
                     VStack(spacing: 24) {
                         // Sharing section
@@ -5203,6 +5224,9 @@ struct ProfileTabView: View {
         }
         .fullScreenCover(isPresented: $showingInstagramMock) {
             InstagramMockView()
+        }
+        .sheet(isPresented: $showingPremiumPaywall) {
+            PremiumPaywallView()
         }
     }
 }
