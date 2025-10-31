@@ -12,6 +12,10 @@ struct RestaurantDetailView: View {
     @State private var userNotes: String = ""
     @State private var userRating: Double = 0.0
     
+    private var userVisitStatus: VisitStatus {
+        store.getUserData(for: restaurant.id)?.visitStatus ?? .wantToTry
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -149,6 +153,48 @@ struct RestaurantDetailView: View {
                                 }
                                 .padding(.horizontal, 30)
                                 .padding(.top, 16)
+                                
+                                // Visit Status Toggle
+                                VStack(spacing: 12) {
+                                    Text("Visit Status")
+                                        .font(.clashDisplayButtonTemp())
+                                        .foregroundColor(.primary)
+                                    
+                                    HStack(spacing: 16) {
+                                        Button(action: {
+                                            HapticManager.shared.selection()
+                                            store.updateVisitStatus(for: restaurant.id, status: .wantToTry)
+                                        }) {
+                                            HStack(spacing: 8) {
+                                                Image(systemName: userVisitStatus == .wantToTry ? "circle.fill" : "circle")
+                                                    .font(.clashDisplayBodyTemp())
+                                                    .foregroundColor(userVisitStatus == .wantToTry ? .reelEatsAccent : .secondary)
+                                                
+                                                Text("Want to Try")
+                                                    .font(.clashDisplayBodyTemp())
+                                                    .foregroundColor(userVisitStatus == .wantToTry ? .primary : .secondary)
+                                            }
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        
+                                        Button(action: {
+                                            HapticManager.shared.selection()
+                                            store.updateVisitStatus(for: restaurant.id, status: .visited)
+                                        }) {
+                                            HStack(spacing: 8) {
+                                                Image(systemName: userVisitStatus == .visited ? "checkmark.circle.fill" : "circle")
+                                                    .font(.clashDisplayBodyTemp())
+                                                    .foregroundColor(userVisitStatus == .visited ? .reelEatsAccent : .secondary)
+                                                
+                                                Text("Visited")
+                                                    .font(.clashDisplayBodyTemp())
+                                                    .foregroundColor(userVisitStatus == .visited ? .primary : .secondary)
+                                            }
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                    }
+                                }
+                                .padding(.top, 20)
                                 
                                 // User Rating Section
                                 VStack(spacing: 12) {

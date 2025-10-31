@@ -72,9 +72,9 @@ struct WelcomeScreen: View {
             VStack(spacing: 50) {
                 Spacer()
                 
-                // Animated ReelEats R Logo above the title
+                // Animated ReelEats Logo above the title
                 Group {
-                    if let uiImage = UIImage(named: "ReelEats R Logo") ?? UIImage(contentsOfFile: Bundle.main.path(forResource: "ReelEats R Logo", ofType: "png") ?? "") {
+                    if let uiImage = UIImage(named: "ReelEats logo") {
                         Image(uiImage: uiImage)
                             .resizable()
                             .scaledToFit()
