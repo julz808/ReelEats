@@ -1,0 +1,630 @@
+{
+  "title": "Facility-Practitioner Detection Methodology Guide",
+  "version": "2.0",
+  "last_updated": "2025-10-29",
+  "database": "PostgreSQL",
+  "host": "35.189.18.41",
+  "database_name": "postgres",
+
+  "overview": {
+    "purpose": "This guide documents how the rostering automation system detects which nurses, GPs, geriatricians, specialists, and nurse practitioners are assigned to each facility (care home)",
+    "methodology": "Dual-source detection using both explicit facility-practitioner mappings AND historical booking data",
+    "key_principle": "A practitioner is associated with a facility if they appear in EITHER the facility_practitioner mapping table OR have rounds/bookings at that facility"
+  },
+
+  "core_methodology": {
+    "detection_sources": [
+      {
+        "source": "facility_practitioner table",
+        "type": "Primary/Explicit",
+        "description": "Many-to-many junction table that explicitly defines facility-practitioner relationships",
+        "reliability": "High - represents intended permanent assignments",
+        "use_case": "Practitioners officially assigned to facilities"
+      },
+      {
+        "source": "rounds table",
+        "type": "Secondary/Implicit",
+        "description": "Booking/scheduling table that contains actual work assignments",
+        "reliability": "High - represents actual work history",
+        "use_case": "Practitioners who have worked or are scheduled to work at facilities, even if not in explicit mapping"
+      }
+    ],
+    "combination_logic": {
+      "operator": "UNION",
+      "description": "Takes the union of practitioners from both sources - if a practitioner appears in EITHER source, they are associated with the facility",
+      "rationale": "Ensures comprehensive detection - captures both permanent assignments and temporary/historical work relationships"
+    }
+  },
+
+  "database_schema": {
+    "tables": [
+      {
+        "table_name": "facility_practitioner",
+        "description": "Junction table linking facilities to practitioners (many-to-many relationship)",
+        "columns": [
+          {
+            "name": "facilities_id",
+            "type": "INTEGER",
+            "description": "Foreign key to facilities.id",
+            "references": "facilities.id"
+          },
+          {
+            "name": "practitioners_id",
+            "type": "INTEGER",
+            "description": "Foreign key to users.id (where users have practitioner_type_id)",
+            "references": "users.id"
+          }
+        ],
+        "notes": "No primary key shown - acts as pure junction table"
+      },
+      {
+        "table_name": "rounds",
+        "description": "Scheduled work periods/bookings for practitioners at facilities",
+        "columns": [
+          {
+            "name": "id",
+            "type": "INTEGER",
+            "description": "Primary key"
+          },
+          {
+            "name": "facility_id",
+            "type": "INTEGER",
+            "description": "Foreign key to facilities.id - where the round takes place",
+            "references": "facilities.id"
+          },
+          {
+            "name": "practitioner_id",
+            "type": "INTEGER",
+            "description": "Foreign key to users.id - the doctor/practitioner working this round",
+            "references": "users.id",
+            "notes": "Used for detecting GP, Geriatrician, Specialist, Nurse Practitioner assignments"
+          },
+          {
+            "name": "nurse_id",
+            "type": "INTEGER",
+            "description": "Foreign key to users.id - the nurse supporting this round",
+            "references": "users.id",
+            "notes": "Used for detecting Nurse assignments (not Nurse Practitioners)"
+          },
+          {
+            "name": "start_at",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "description": "Round start time (UTC)"
+          },
+          {
+            "name": "end_at",
+            "type": "TIMESTAMP WITH TIME ZONE",
+            "description": "Round end time (UTC)"
+          },
+          {
+            "name": "access_specialist_id",
+            "type": "INTEGER",
+            "description": "Additional specialist identifier",
+            "references": "users.id"
+          }
+        ]
+      },
+      {
+        "table_name": "users",
+        "description": "All system users including clinicians",
+        "columns": [
+          {
+            "name": "id",
+            "type": "INTEGER",
+            "description": "Primary key"
+          },
+          {
+            "name": "given_name",
+            "type": "VARCHAR",
+            "description": "First name"
+          },
+          {
+            "name": "family_name",
+            "type": "VARCHAR",
+            "description": "Last name"
+          },
+          {
+            "name": "practitioner_type_id",
+            "type": "INTEGER",
+            "description": "Foreign key to practitioner_types.id",
+            "references": "practitioner_types.id",
+            "notes": "NULL for non-practitioners"
+          },
+          {
+            "name": "is_deactivated",
+            "type": "BOOLEAN",
+            "description": "Whether user account is deactivated"
+          }
+        ],
+        "filter_criteria": "practitioner_type_id IS NOT NULL AND (is_deactivated = FALSE OR is_deactivated IS NULL)"
+      },
+      {
+        "table_name": "practitioner_types",
+        "description": "Defines practitioner roles/types",
+        "columns": [
+          {
+            "name": "id",
+            "type": "INTEGER",
+            "description": "Primary key"
+          },
+          {
+            "name": "name",
+            "type": "VARCHAR",
+            "description": "Practitioner type name",
+            "valid_values": [
+              "GP",
+              "Geriatrician",
+              "Specialist",
+              "Nurse Practitioner",
+              "Nurse",
+              "GP - Telehealth",
+              "GP Telehealth Region Cover",
+              "Locum"
+            ]
+          },
+          {
+            "name": "is_deactivated",
+            "type": "BOOLEAN",
+            "description": "Whether practitioner type is deactivated"
+          }
+        ]
+      },
+      {
+        "table_name": "facilities",
+        "description": "Care homes/facilities where services are provided",
+        "columns": [
+          {
+            "name": "id",
+            "type": "INTEGER",
+            "description": "Primary key"
+          },
+          {
+            "name": "name",
+            "type": "VARCHAR",
+            "description": "Facility name"
+          },
+          {
+            "name": "timezone",
+            "type": "VARCHAR",
+            "description": "Facility timezone"
+          },
+          {
+            "name": "is_deactivated",
+            "type": "BOOLEAN",
+            "description": "Whether facility is deactivated"
+          }
+        ]
+      }
+    ]
+  },
+
+  "sql_queries": {
+    "extract_facility_practitioner_mappings": {
+      "description": "Extract explicit facility-practitioner mappings",
+      "query": "SELECT facilities_id, practitioners_id\nFROM facility_practitioner",
+      "result_columns": ["facilities_id", "practitioners_id"],
+      "notes": "No filters - gets all mappings regardless of status"
+    },
+    "extract_practitioners": {
+      "description": "Extract all active practitioners with their types",
+      "query": "SELECT \n    id, \n    given_name, \n    family_name, \n    practitioner_type_id,\n    is_deactivated\nFROM users\nWHERE practitioner_type_id IS NOT NULL\nAND (is_deactivated = FALSE OR is_deactivated IS NULL)",
+      "result_columns": ["id", "given_name", "family_name", "practitioner_type_id", "is_deactivated"]
+    },
+    "extract_practitioner_types": {
+      "description": "Extract practitioner type definitions",
+      "query": "SELECT id, name, is_deactivated\nFROM practitioner_types\nWHERE is_deactivated = FALSE OR is_deactivated IS NULL",
+      "result_columns": ["id", "name", "is_deactivated"]
+    },
+    "extract_rounds": {
+      "description": "Extract rounds/bookings for date range analysis",
+      "query": "SELECT \n    id,\n    facility_id,\n    practitioner_id,\n    nurse_id,\n    start_at,\n    end_at,\n    access_specialist_id\nFROM rounds\nWHERE DATE(start_at) BETWEEN %s AND %s",
+      "parameters": ["start_date", "end_date"],
+      "result_columns": ["id", "facility_id", "practitioner_id", "nurse_id", "start_at", "end_at", "access_specialist_id"],
+      "notes": "Date range typically includes historical data for context plus future schedules"
+    }
+  },
+
+  "detection_implementation": {
+    "nurses": {
+      "description": "Detect nurses (traditional nurses, NOT nurse practitioners) assigned to facilities",
+      "practitioner_type_filter": {
+        "include": "practitioner_types.name LIKE '%Nurse%'",
+        "exclude": "practitioner_types.name LIKE '%Practitioner%'"
+      },
+      "step_by_step": [
+        {
+          "step": 1,
+          "action": "Identify nurse practitioner types",
+          "code": "nurse_types = practitioner_types_df[\n    practitioner_types_df['name'].str.contains('Nurse', case=False, na=False) &\n    ~practitioner_types_df['name'].str.contains('Practitioner', case=False, na=False)\n]['id'].tolist()"
+        },
+        {
+          "step": 2,
+          "action": "Get all nurses from users table",
+          "code": "nurses_df = users_df[users_df['practitioner_type_id'].isin(nurse_types)].copy()"
+        },
+        {
+          "step": 3,
+          "action": "Get mapped facilities for each nurse",
+          "code": "mapped_facilities = set(facility_practitioner_df['facilities_id'].unique())"
+        },
+        {
+          "step": 4,
+          "action": "Get facilities from rounds data",
+          "code": "rounds_facilities = set(rounds_df['facility_id'].dropna().unique())"
+        },
+        {
+          "step": 5,
+          "action": "Combine both facility sources",
+          "code": "all_facilities = mapped_facilities.union(rounds_facilities)"
+        },
+        {
+          "step": 6,
+          "action": "For each facility, get nurses from mapping table",
+          "code": "facility_nurses_mapped = facility_practitioner_df[\n    facility_practitioner_df['facilities_id'] == facility_id\n]['practitioners_id'].tolist()"
+        },
+        {
+          "step": 7,
+          "action": "For each facility, get nurses from rounds table",
+          "code": "rounds_at_facility = rounds_df[rounds_df['facility_id'] == facility_id]\nfacility_nurses_rounds = rounds_at_facility['nurse_id'].dropna().unique().tolist()"
+        },
+        {
+          "step": 8,
+          "action": "Combine both nurse sources using UNION",
+          "code": "all_facility_nurses = list(set(facility_nurses_mapped + facility_nurses_rounds))"
+        },
+        {
+          "step": 9,
+          "action": "Filter nurses to those associated with facility",
+          "code": "nurses_at_facility = nurses_df[nurses_df['id'].isin(all_facility_nurses)]"
+        }
+      ],
+      "key_field_in_rounds": "nurse_id",
+      "result": "List of nurse IDs and names associated with each facility"
+    },
+    "doctors": {
+      "description": "Detect doctors (GPs, Geriatricians, Specialists, Nurse Practitioners) assigned to facilities",
+      "practitioner_types": ["GP", "Geriatrician", "Specialist", "Nurse Practitioner"],
+      "step_by_step": [
+        {
+          "step": 1,
+          "action": "Define doctor type names",
+          "code": "doctor_type_names = ['GP', 'Geriatrician', 'Specialist', 'Nurse Practitioner']"
+        },
+        {
+          "step": 2,
+          "action": "Join users with practitioner_types to get type names",
+          "code": "doctors_with_types = users_df.merge(\n    practitioner_types_df[['id', 'name']],\n    left_on='practitioner_type_id',\n    right_on='id',\n    how='left',\n    suffixes=('', '_type')\n)"
+        },
+        {
+          "step": 3,
+          "action": "Filter to doctor types only",
+          "code": "doctors_df = doctors_with_types[\n    doctors_with_types[type_col].isin(doctor_type_names)\n].copy()"
+        },
+        {
+          "step": 4,
+          "action": "Get all facilities from both sources",
+          "code": "mapped_facilities = set(facility_practitioner_df['facilities_id'].unique())\nrounds_facilities = set(rounds_df['facility_id'].dropna().unique())\nall_facilities = mapped_facilities.union(rounds_facilities)"
+        },
+        {
+          "step": 5,
+          "action": "For each facility, get doctors from mapping table",
+          "code": "facility_doctors_mapped = facility_practitioner_df[\n    facility_practitioner_df['facilities_id'] == facility_id\n]['practitioners_id'].tolist()"
+        },
+        {
+          "step": 6,
+          "action": "For each facility, get doctors from rounds table",
+          "code": "rounds_at_facility = rounds_df[rounds_df['facility_id'] == facility_id]\nfacility_doctors_rounds = rounds_at_facility['practitioner_id'].dropna().unique().tolist()"
+        },
+        {
+          "step": 7,
+          "action": "Combine both doctor sources using UNION",
+          "code": "all_facility_doctors = list(set(facility_doctors_mapped + facility_doctors_rounds))"
+        },
+        {
+          "step": 8,
+          "action": "Filter doctors to those associated with facility",
+          "code": "doctors_at_facility = doctors_df[doctors_df['id'].isin(all_facility_doctors)]"
+        },
+        {
+          "step": 9,
+          "action": "Group doctors by type for the facility",
+          "code": "facility_result = {\n    'GP': [],\n    'Geriatrician': [],\n    'Specialist': [],\n    'Nurse Practitioner': []\n}\nfor _, doctor in doctors_at_facility.iterrows():\n    doctor_type = doctor[type_col]\n    facility_result[doctor_type].append({\n        'id': doctor['id'],\n        'name': f\"{doctor['given_name']} {doctor['family_name']}\"\n    })"
+        }
+      ],
+      "key_field_in_rounds": "practitioner_id",
+      "result": "Dictionary of doctor types to lists of doctor IDs and names for each facility"
+    }
+  },
+
+  "data_flow": {
+    "extraction_phase": [
+      {
+        "step": 1,
+        "action": "Extract facility_practitioner mappings",
+        "data_source": "facility_practitioner table",
+        "result": "DataFrame with facilities_id and practitioners_id columns"
+      },
+      {
+        "step": 2,
+        "action": "Extract rounds data",
+        "data_source": "rounds table",
+        "result": "DataFrame with facility_id, practitioner_id, nurse_id columns"
+      },
+      {
+        "step": 3,
+        "action": "Extract users",
+        "data_source": "users table",
+        "result": "DataFrame with id, given_name, family_name, practitioner_type_id"
+      },
+      {
+        "step": 4,
+        "action": "Extract practitioner types",
+        "data_source": "practitioner_types table",
+        "result": "DataFrame with id and name columns"
+      }
+    ],
+    "transformation_phase": [
+      {
+        "step": 1,
+        "action": "Identify all facilities",
+        "logic": "Union of facilities from facilities table, facility_practitioner.facilities_id, and rounds.facility_id"
+      },
+      {
+        "step": 2,
+        "action": "For each facility, identify practitioners from explicit mapping",
+        "logic": "Query facility_practitioner where facilities_id = facility_id"
+      },
+      {
+        "step": 3,
+        "action": "For each facility, identify practitioners from rounds data",
+        "logic": "Query rounds where facility_id = facility_id, extract unique practitioner_id and nurse_id values"
+      },
+      {
+        "step": 4,
+        "action": "Combine practitioner lists",
+        "logic": "Take union (set) of practitioners from both sources"
+      },
+      {
+        "step": 5,
+        "action": "Join with users table to get names",
+        "logic": "Join combined practitioner IDs with users.id to get given_name and family_name"
+      },
+      {
+        "step": 6,
+        "action": "Join with practitioner_types to categorize",
+        "logic": "Join users.practitioner_type_id with practitioner_types.id to categorize as GP, Nurse, etc."
+      }
+    ]
+  },
+
+  "edge_cases": {
+    "case_1": {
+      "scenario": "Practitioner in facility_practitioner but no rounds",
+      "handling": "Include - they are officially assigned",
+      "reason": "Explicit mapping takes precedence"
+    },
+    "case_2": {
+      "scenario": "Practitioner has rounds but not in facility_practitioner",
+      "handling": "Include - they have worked there",
+      "reason": "Rounds data represents actual work relationship"
+    },
+    "case_3": {
+      "scenario": "Facility exists in facilities table but has no practitioners in either source",
+      "handling": "Include facility with empty practitioner lists",
+      "reason": "Facility exists and should be shown even if unstaffed"
+    },
+    "case_4": {
+      "scenario": "Facility appears in rounds but not in facilities table",
+      "handling": "Create placeholder facility entry",
+      "reason": "System discovers facilities from multiple sources",
+      "implementation": "new_row = {'id': fac_id, 'name': f'Facility {fac_id}'}"
+    },
+    "case_5": {
+      "scenario": "Practitioner is deactivated in users table",
+      "handling": "Exclude from practitioner extraction",
+      "reason": "Only active practitioners should be shown",
+      "filter": "users.is_deactivated = FALSE OR users.is_deactivated IS NULL"
+    },
+    "case_6": {
+      "scenario": "Multiple practitioners with same name at same facility",
+      "handling": "All included with unique IDs",
+      "reason": "ID-based system prevents duplicates while allowing same names"
+    },
+    "case_7": {
+      "scenario": "Nurse appears as both nurse_id and practitioner_id in rounds",
+      "handling": "Include only once per facility",
+      "reason": "Set union eliminates duplicates"
+    }
+  },
+
+  "output_formats": {
+    "sheet_1_nurses": {
+      "description": "One row per facility with all nurses for that facility in separate columns",
+      "structure": "Home Name | Ticket Columns | Nurse A Name | Nurse A Working Today | ... | Nurse B Name | Nurse B Working Today | ...",
+      "nurse_detection": "Uses both facility_practitioner and rounds.nurse_id",
+      "dynamic_columns": "Number of nurse columns depends on max nurses at any facility"
+    },
+    "sheet_2_doctors": {
+      "description": "Multiple rows per facility (one row per doctor type: GP, Geri, Specialist, Nurse Prac)",
+      "structure": "Home Name | Ticket Columns | Doctor Name | Doctor Rostered Elsewhere | Doctor Rostered Here | ...",
+      "doctor_detection": "Uses both facility_practitioner and rounds.practitioner_id",
+      "grouping": "Doctors grouped by practitioner type within each facility"
+    }
+  },
+
+  "code_references": {
+    "nurse_detection": {
+      "file": "rostering-automation/src/transformers/nurse_sheet_transformer.py",
+      "function": "_get_nurse_details_by_facility",
+      "line_range": "278-377"
+    },
+    "doctor_detection": {
+      "file": "rostering-automation/src/transformers/doctor_sheet_transformer.py",
+      "function": "_get_doctor_facility_mappings",
+      "line_range": "288-370"
+    },
+    "sql_queries": {
+      "file": "rostering-automation/src/config/constants.py",
+      "section": "SQL_QUERIES",
+      "line_range": "118-204"
+    },
+    "extraction_methods": {
+      "file": "rostering-automation/src/extractors/postgres_extractor.py",
+      "methods": ["get_facility_practitioner_mappings", "get_rounds", "get_users", "get_practitioner_types"],
+      "line_range": "156-204"
+    }
+  },
+
+  "performance_considerations": {
+    "optimization_1": {
+      "technique": "Batch extraction",
+      "description": "All data extracted in single queries per table, not row-by-row",
+      "benefit": "Reduces database round trips"
+    },
+    "optimization_2": {
+      "technique": "DataFrame operations",
+      "description": "Uses pandas DataFrame operations for filtering and joining",
+      "benefit": "Leverages vectorized operations for speed"
+    },
+    "optimization_3": {
+      "technique": "Set operations for deduplication",
+      "description": "Uses Python sets for combining practitioner IDs from multiple sources",
+      "benefit": "Automatic deduplication without manual checking"
+    },
+    "data_volume": {
+      "typical_facilities": "50-200",
+      "typical_practitioners": "100-500",
+      "typical_rounds": "1000-5000 per week",
+      "expected_performance": "Complete detection in under 5 seconds"
+    }
+  },
+
+  "validation_rules": {
+    "rule_1": {
+      "check": "Every facility has at least one source of data",
+      "validation": "Facility appears in facilities table OR rounds table",
+      "action_if_fail": "Skip facility or create placeholder"
+    },
+    "rule_2": {
+      "check": "Every practitioner has valid practitioner_type_id",
+      "validation": "practitioner_type_id IS NOT NULL AND exists in practitioner_types",
+      "action_if_fail": "Exclude practitioner from results"
+    },
+    "rule_3": {
+      "check": "Practitioner categorization is unambiguous",
+      "validation": "Each practitioner has exactly one practitioner_type",
+      "action_if_fail": "Use most recent practitioner_type assignment"
+    },
+    "rule_4": {
+      "check": "No duplicate practitioners per facility",
+      "validation": "Each practitioner ID appears at most once per facility in output",
+      "action_if_fail": "Set union automatically handles this"
+    }
+  },
+
+  "examples": {
+    "example_1": {
+      "scenario": "Nurse appears in both facility_practitioner and rounds",
+      "facility_id": 123,
+      "nurse_id": 456,
+      "facility_practitioner_entry": {
+        "facilities_id": 123,
+        "practitioners_id": 456
+      },
+      "rounds_entry": {
+        "facility_id": 123,
+        "nurse_id": 456,
+        "start_at": "2025-10-29 09:00:00+00"
+      },
+      "result": "Nurse 456 associated with Facility 123 (appears once due to set union)",
+      "detection_source": "Both"
+    },
+    "example_2": {
+      "scenario": "Doctor only appears in rounds, not in facility_practitioner",
+      "facility_id": 789,
+      "doctor_id": 101,
+      "facility_practitioner_entry": null,
+      "rounds_entry": {
+        "facility_id": 789,
+        "practitioner_id": 101,
+        "start_at": "2025-10-29 14:00:00+00"
+      },
+      "result": "Doctor 101 associated with Facility 789",
+      "detection_source": "Rounds only"
+    },
+    "example_3": {
+      "scenario": "GP permanently assigned but no recent rounds",
+      "facility_id": 555,
+      "doctor_id": 202,
+      "facility_practitioner_entry": {
+        "facilities_id": 555,
+        "practitioners_id": 202
+      },
+      "rounds_entry": null,
+      "result": "Doctor 202 associated with Facility 555",
+      "detection_source": "Mapping only"
+    }
+  },
+
+  "troubleshooting": {
+    "issue_1": {
+      "problem": "Practitioner not showing up for facility",
+      "possible_causes": [
+        "Practitioner is deactivated (is_deactivated = TRUE)",
+        "Practitioner has NULL practitioner_type_id",
+        "Facility-practitioner mapping is missing AND no rounds exist",
+        "Practitioner type filter excludes this type"
+      ],
+      "debugging_steps": [
+        "Check users.is_deactivated for practitioner",
+        "Check users.practitioner_type_id is not NULL",
+        "Query facility_practitioner for this combination",
+        "Query rounds for this facility_id + practitioner_id/nurse_id combination"
+      ]
+    },
+    "issue_2": {
+      "problem": "Duplicate practitioners appearing",
+      "possible_causes": [
+        "Set union not being applied correctly",
+        "Multiple records in facility_practitioner (database integrity issue)",
+        "Practitioner appears with different IDs (data quality issue)"
+      ],
+      "debugging_steps": [
+        "Check if list(set(...)) is being used",
+        "Query facility_practitioner for duplicates",
+        "Check for data quality issues in users table"
+      ]
+    },
+    "issue_3": {
+      "problem": "Facility has no practitioners despite having rounds",
+      "possible_causes": [
+        "All practitioners at facility are deactivated",
+        "Rounds have NULL practitioner_id and nurse_id",
+        "Practitioner type filter is too restrictive"
+      ],
+      "debugging_steps": [
+        "Check rounds.practitioner_id and rounds.nurse_id are not NULL",
+        "Verify practitioner is active in users table",
+        "Check practitioner_type filter logic"
+      ]
+    }
+  },
+
+  "future_enhancements": {
+    "enhancement_1": {
+      "feature": "Temporal awareness",
+      "description": "Track when facility-practitioner relationships start/end",
+      "benefit": "More accurate historical reporting"
+    },
+    "enhancement_2": {
+      "feature": "Confidence scoring",
+      "description": "Assign confidence scores based on data source and recency",
+      "benefit": "Distinguish between active vs historical relationships"
+    },
+    "enhancement_3": {
+      "feature": "Primary vs secondary assignments",
+      "description": "Flag primary facility for each practitioner",
+      "benefit": "Better resource allocation insights"
+    }
+  }
+}

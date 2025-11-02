@@ -1,0 +1,12 @@
+{
+  "prompt": "I need your help building a data extraction and reporting tool that connects to a PostgreSQL database and generates Excel reports.\n\n## Database Credentials\n\nPlease connect to the following PostgreSQL database:\n\n**Host:** 35.189.18.41\n**Port:** 5432\n**Database Name:** postgres\n**Username:** julian_ou\n**Password:** tkgc.4ieQCwKhj_MWQmjwoXrqDbdEsT.vr8wQQkLx*wUa6CbQh!s\n**SSL Mode:** prefer\n**Connection Timeout:** 30 seconds\n\n## Initial Tasks\n\n1. **Establish Database Connection**: First, create a Python script that connects to this PostgreSQL database using the credentials above.\n\n2. **Explore Database Schema**: Once connected, please thoroughly explore the database structure:\n   - List all available schemas\n   - List all tables within each schema\n   - For each table, retrieve:\n     - Column names and data types\n     - Primary keys and foreign keys\n     - Sample data (first few rows)\n   - Identify any views or materialized views\n   \n3. **Document Findings**: Create a comprehensive summary of the database structure, including:\n   - A table listing with brief descriptions\n   - Relationships between tables\n   - Key fields that might be useful for reporting\n\n## Project Goal\n\nAfter you've explored the database, I'll provide specific instructions on what data I need extracted and how the Excel report should be formatted. The reports will likely involve:\n- Querying specific tables or joining multiple tables\n- Filtering and aggregating data\n- Formatting the output into structured Excel spreadsheets with multiple sheets if needed\n\nPlease start by setting up the database connection and exploring the schema. Use Python with libraries like `psycopg2` or `sqlalchemy` for database connectivity, and `pandas` + `openpyxl` or `xlsxwriter` for Excel generation.",
+  "database_credentials": {
+    "host": "35.189.18.41",
+    "port": 5432,
+    "database": "postgres",
+    "username": "julian_ou",
+    "password": "tkgc.4ieQCwKhj_MWQmjwoXrqDbdEsT.vr8wQQkLx*wUa6CbQh!s",
+    "sslmode": "prefer",
+    "connect_timeout": 30
+  }
+}

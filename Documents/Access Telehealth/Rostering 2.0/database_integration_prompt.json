@@ -1,0 +1,233 @@
+{
+  "task": "Add 'Open Tickets' column to Excel output with PostgreSQL data",
+  "database_connection": {
+    "host": "35.189.18.41",
+    "port": 5432,
+    "database": "postgres",
+    "username": "julian_ou",
+    "password": "tkgc.4ieQCwKhj_MWQmjwoXrqDbdEsT.vr8wQQkLx*wUa6CbQh!s",
+    "sslmode": "prefer",
+    "connect_timeout": 30,
+    "timezone": "Australia/Sydney"
+  },
+  "database_schema": {
+    "service_requests": {
+      "description": "Main ticket/service request data",
+      "fields": {
+        "id": {
+          "type": "integer",
+          "description": "Unique ticket identifier (primary key)"
+        },
+        "status": {
+          "type": "text",
+          "description": "Current status of the ticket",
+          "possible_values": ["Open", "Allocated", "Completed", "Cancelled"]
+        },
+        "facility_id": {
+          "type": "integer",
+          "description": "Which care home/facility this ticket belongs to (foreign key to facilities.id)"
+        },
+        "created_at": {
+          "type": "timestamp with timezone",
+          "description": "When the ticket was created (stored in UTC)"
+        },
+        "schedule_at": {
+          "type": "timestamp with timezone",
+          "description": "When the ticket is scheduled to be completed (stored in UTC, can be NULL)"
+        },
+        "schedule_by": {
+          "type": "timestamp with timezone",
+          "description": "Deadline for scheduling the ticket (stored in UTC, can be NULL)"
+        },
+        "practitioner_type_id": {
+          "type": "integer",
+          "description": "Type of clinician needed (foreign key to practitioner_types.id)"
+        }
+      }
+    },
+    "facilities": {
+      "description": "Care homes/facilities information",
+      "fields": {
+        "id": {
+          "type": "integer",
+          "description": "Unique facility identifier (primary key)"
+        },
+        "name": {
+          "type": "text",
+          "description": "Name of the care home/facility",
+          "examples": ["Bolton Clarke - Farnorha", "Estia Health - Twin Waters"]
+        },
+        "timezone": {
+          "type": "text",
+          "description": "Timezone of the facility",
+          "examples": ["Australia/Melbourne", "Australia/Brisbane", "Australia/Perth"]
+        },
+        "is_deactivated": {
+          "type": "boolean",
+          "description": "Whether this facility is inactive/closed (FALSE or NULL means active)"
+        }
+      }
+    }
+  },
+  "table_relationships": {
+    "service_requests_to_facilities": "service_requests.facility_id → facilities.id"
+  },
+  "sample_data": {
+    "service_requests": [
+      {
+        "id": 557523,
+        "status": "Open",
+        "facility_id": 91,
+        "schedule_at": null,
+        "created_at": "2025-03-17 22:56:05.782229+00:00",
+        "practitioner_type_id": 7
+      },
+      {
+        "id": 701886,
+        "status": "Open",
+        "facility_id": 146,
+        "schedule_at": "2025-09-16 03:07:04.304021+00:00",
+        "created_at": "2025-09-02 03:07:04.802970+00:00",
+        "practitioner_type_id": 1
+      },
+      {
+        "id": 622540,
+        "status": "Open",
+        "facility_id": 225,
+        "schedule_at": "2025-09-03 23:13:25+00:00",
+        "created_at": "2025-06-04 23:13:26.016068+00:00",
+        "practitioner_type_id": 1
+      },
+      {
+        "id": 577636,
+        "status": "Allocated",
+        "facility_id": 191,
+        "schedule_at": "2025-05-21 23:08:29+00:00",
+        "created_at": "2025-04-09 23:08:29.766901+00:00",
+        "practitioner_type_id": 2
+      },
+      {
+        "id": 454868,
+        "status": "Open",
+        "facility_id": 110,
+        "schedule_at": null,
+        "created_at": "2024-11-06 23:28:52.679123+00:00",
+        "practitioner_type_id": 7
+      }
+    ],
+    "facilities": [
+      {
+        "id": 91,
+        "name": "Bolton Clarke - Farnorha",
+        "timezone": "Australia/Brisbane",
+        "is_deactivated": false
+      },
+      {
+        "id": 146,
+        "name": "Estia Health - Twin Waters",
+        "timezone": "Australia/Brisbane",
+        "is_deactivated": false
+      },
+      {
+        "id": 225,
+        "name": "Autumn Care - Skye Lodge",
+        "timezone": "Australia/Melbourne",
+        "is_deactivated": false
+      },
+      {
+        "id": 191,
+        "name": "New Direction Care",
+        "timezone": "Australia/Brisbane",
+        "is_deactivated": false
+      },
+      {
+        "id": 110,
+        "name": "Bolton Clarke - Rowes Bay",
+        "timezone": "Australia/Brisbane",
+        "is_deactivated": false
+      }
+    ]
+  },
+  "requirement": {
+    "column_name": "Open Tickets",
+    "data_type": "Integer (count)",
+    "business_logic": "For each facility/home in the Excel, count the number of tickets that have status IN ('Open', 'Allocated') and belong to that facility"
+  },
+  "sql_query": {
+    "description": "Query to get open ticket counts by facility",
+    "query": "SELECT \n    f.id as facility_id,\n    f.name as facility_name,\n    COUNT(sr.id) as open_tickets\nFROM facilities f\nLEFT JOIN service_requests sr ON f.id = sr.facility_id\n    AND sr.status IN ('Open', 'Allocated')\nWHERE (f.is_deactivated = FALSE OR f.is_deactivated IS NULL)\n    AND f.name NOT LIKE '%test%' \n    AND f.name NOT LIKE '%Test%'\nGROUP BY f.id, f.name\nORDER BY f.name"
+  },
+  "filtering_rules": {
+    "include_tickets_where": {
+      "status_is_Open": true,
+      "status_is_Allocated": true
+    },
+    "exclude_tickets_where": {
+      "status_is_Completed": true,
+      "status_is_Cancelled": true,
+      "any_other_status": true
+    },
+    "exclude_facilities_where": {
+      "is_deactivated_is_TRUE": true,
+      "name_contains_test": true
+    },
+    "include_facilities_where": {
+      "is_deactivated_is_FALSE_or_NULL": true,
+      "real_facility_names_only": true
+    }
+  },
+  "timezone_notes": {
+    "storage": "All timestamp fields are stored in UTC in the database",
+    "conversion": "If displaying or filtering by dates, convert to Australia/Sydney timezone",
+    "for_this_task": "Timezone conversion NOT required for basic status count"
+  },
+  "expected_output_example": [
+    {
+      "Facility Name": "Autumn Care - Skye Lodge",
+      "Open Tickets": 23
+    },
+    {
+      "Facility Name": "Bolton Clarke - Farnorha",
+      "Open Tickets": 15
+    },
+    {
+      "Facility Name": "Estia Health - Twin Waters",
+      "Open Tickets": 8
+    },
+    {
+      "Facility Name": "New Direction Care",
+      "Open Tickets": 12
+    }
+  ],
+  "implementation_steps": [
+    "Connect to PostgreSQL using the credentials provided",
+    "Query the database using the SQL logic provided",
+    "Add 'Open Tickets' column to your Excel output",
+    "Populate the column with the count for each facility",
+    "Apply number formatting (center-aligned, integer format)"
+  ],
+  "edge_case_handling": {
+    "zero_tickets": "Show 0 (not blank or NULL)",
+    "no_tickets_at_all": "Show 0",
+    "join_type": "Use LEFT JOIN to ensure all facilities appear even if they have no tickets"
+  },
+  "validation_queries": {
+    "test_single_facility": {
+      "description": "Test query for facility ID = 91",
+      "query": "SELECT COUNT(*) \nFROM service_requests \nWHERE facility_id = 91 \n  AND status IN ('Open', 'Allocated')"
+    },
+    "test_total_all_facilities": {
+      "description": "Check total across all facilities",
+      "query": "SELECT COUNT(*) \nFROM service_requests sr\nJOIN facilities f ON sr.facility_id = f.id\nWHERE sr.status IN ('Open', 'Allocated')\n  AND (f.is_deactivated = FALSE OR f.is_deactivated IS NULL)\n  AND f.name NOT LIKE '%test%'\n  AND f.name NOT LIKE '%Test%'"
+    }
+  },
+  "key_points_summary": [
+    "Status Filter: Only count tickets where status IN ('Open', 'Allocated')",
+    "Relationship: Join service_requests.facility_id to facilities.id",
+    "Active Only: Exclude deactivated facilities",
+    "No Test Data: Exclude facilities with 'test' in the name",
+    "One Count Per Facility: GROUP BY facility",
+    "Show Zero: If no tickets, display 0 (not blank)"
+  ],
+  "instruction": "Please add a new column called 'Open Tickets' to my Excel output that displays the count of tickets with status 'Open' or 'Allocated' for each facility. Use the PostgreSQL database connection details and schema information provided above. Apply all the filtering rules specified, and ensure the output matches the expected format."
+}
